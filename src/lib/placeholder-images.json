@@ -1,3 +1,52 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "solo-leveling",
+      "description": "Cover art for Solo Leveling",
+      "imageUrl": "https://images.unsplash.com/photo-1759157757147-ca561c9cb629?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxmYW50YXN5JTIwd2FycmlvcnxlbnwwfHx8fDE3NTk0OTg3NDd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "fantasy warrior"
+    },
+    {
+      "id": "one-piece",
+      "description": "Cover art for One Piece",
+      "imageUrl": "https://images.unsplash.com/photo-1690994300467-5683f0ff0127?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cGlyYXRlJTIwYWR2ZW50dXJlfGVufDB8fHx8MTc1OTQzNzI5N3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "pirate adventure"
+    },
+    {
+      "id": "jujutsu-kaisen",
+      "description": "Cover art for Jujutsu Kaisen",
+      "imageUrl": "https://images.unsplash.com/photo-1556463808-54239ad0cdde?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHx1cmJhbiUyMGZhbnRhc3l8ZW58MHx8fHwxNzU5NTI5MTQ1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "urban fantasy"
+    },
+    {
+      "id": "berserk",
+      "description": "Cover art for Berserk",
+      "imageUrl": "https://images.unsplash.com/photo-1683660108133-b173c2b4281b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxkYXJrJTIwZmFudGFzeXxlbnwwfHx8fDE3NTk1MTA3MTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "dark fantasy"
+    },
+    {
+      "id": "attack-on-titan",
+      "description": "Cover art for Attack on Titan",
+      "imageUrl": "https://images.unsplash.com/photo-1586417349459-43adc209e168?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwb3N0LWFwb2NhbHlwdGljfGVufDB8fHx8MTc1OTUyOTE0NXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "post-apocalyptic"
+    },
+    {
+      "id": "tower-of-god",
+      "description": "Cover art for Tower of God",
+      "imageUrl": "https://images.unsplash.com/photo-1735234600327-f31010a11cae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxmYW50YXN5JTIwdG93ZXJ8ZW58MHx8fHwxNzU5NTI5MTQ1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "fantasy tower"
+    },
+    {
+      "id": "naruto",
+      "description": "Cover art for Naruto",
+      "imageUrl": "https://images.unsplash.com/photo-1627045513740-0cf717d8520f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxuaW5qYSUyMGZhbnRhc3l8ZW58MHx8fHwxNzU5NTI5MTQ1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "ninja fantasy"
+    },
+    {
+      "id": "fullmetal-alchemist",
+      "description": "Cover art for Fullmetal Alchemist",
+      "imageUrl": "https://images.unsplash.com/photo-1730979223402-81fc85bf6a92?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxzdGVhbXB1bmslMjBhbGNoZW15fGVufDB8fHx8MTc1OTUyOTE0NXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "steampunk alchemy"
+    }
+  ]
 }
