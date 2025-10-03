@@ -1,20 +1,24 @@
-import { mangaLibrary } from "@/lib/data";
+"use client";
+
+import { useLibrary } from "@/hooks/use-library";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MangaCard } from "./_components/manga-card";
 
 export default function LibraryPage() {
-  const reading = mangaLibrary.filter((m) => m.status === "Lendo");
-  const planToRead = mangaLibrary.filter((m) => m.status === "Planejo Ler");
-  const completed = mangaLibrary.filter((m) => m.status === "Completo");
+  const { library } = useLibrary();
+
+  const reading = library.filter((m) => m.status === "Lendo");
+  const planToRead = library.filter((m) => m.status === "Planejo Ler");
+  const completed = library.filter((m) => m.status === "Completo");
 
   return (
     <div className="container mx-auto">
       <h1 className="text-3xl font-headline font-bold mb-6">Sua Biblioteca</h1>
       <Tabs defaultValue="reading">
         <TabsList className="grid w-full grid-cols-3 max-w-lg mb-6">
-          <TabsTrigger value="reading">Lendo</TabsTrigger>
-          <TabsTrigger value="planToRead">Planejo Ler</TabsTrigger>
-          <TabsTrigger value="completed">Completo</TabsTrigger>
+          <TabsTrigger value="reading">Lendo ({reading.length})</TabsTrigger>
+          <TabsTrigger value="planToRead">Planejo Ler ({planToRead.length})</TabsTrigger>
+          <TabsTrigger value="completed">Completo ({completed.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="reading">
           {reading.length > 0 ? (

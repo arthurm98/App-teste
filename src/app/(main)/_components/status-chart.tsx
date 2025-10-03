@@ -10,7 +10,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart"
-import { mangaLibrary } from "@/lib/data"
+import { useLibrary } from "@/hooks/use-library"
 
 const chartConfig = {
   Lendo: {
@@ -28,9 +28,14 @@ const chartConfig = {
 }
 
 export function StatusChart() {
+  const { library } = useLibrary();
+  
   const chartData = React.useMemo(() => {
-    const statusCounts = mangaLibrary.reduce((acc, manga) => {
-      acc[manga.status] = (acc[manga.status] || 0) + 1
+    const statusCounts = library.reduce((acc, manga) => {
+      const statusKey = manga.status as keyof typeof chartConfig;
+      if (chartConfig[statusKey]) {
+        acc[statusKey] = (acc[statusKey] || 0) + 1;
+      }
       return acc
     }, {} as Record<string, number>)
 
@@ -39,7 +44,11 @@ export function StatusChart() {
       count,
       fill: chartConfig[status as keyof typeof chartConfig]?.color,
     }))
-  }, [])
+  }, [library])
+
+  if (chartData.length === 0) {
+    return <div className="flex aspect-square max-h-[300px] w-full items-center justify-center text-muted-foreground">Nenhum dado de status para exibir.</div>
+  }
 
   return (
     <ChartContainer

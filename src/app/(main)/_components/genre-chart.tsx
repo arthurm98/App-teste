@@ -8,7 +8,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { mangaLibrary } from "@/lib/data"
+import { useLibrary } from "@/hooks/use-library"
 
 const chartConfig = {
   count: {
@@ -18,8 +18,10 @@ const chartConfig = {
 }
 
 export function GenreChart() {
+  const { library } = useLibrary();
+
   const chartData = React.useMemo(() => {
-    const genreCounts = mangaLibrary
+    const genreCounts = library
       .flatMap((manga) => manga.genres)
       .reduce((acc, genre) => {
         acc[genre] = (acc[genre] || 0) + 1
@@ -30,7 +32,11 @@ export function GenreChart() {
       .map(([genre, count]) => ({ genre, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 7)
-  }, [])
+  }, [library])
+
+  if (chartData.length === 0) {
+    return <div className="flex h-[300px] w-full items-center justify-center text-muted-foreground">Nenhum dado de gênero para exibir.</div>
+  }
 
   return (
     <ChartContainer config={chartConfig} className="h-[300px] w-full">

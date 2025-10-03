@@ -10,6 +10,7 @@ export type Manga = {
   totalChapters: number;
   readChapters: number;
   genres: string[];
+  imageUrl?: string;
 };
 
 export const mangaLibrary: Manga[] = [
