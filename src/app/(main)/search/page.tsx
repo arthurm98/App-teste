@@ -1,11 +1,17 @@
+"use client";
+
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { mangaLibrary } from "@/lib/data";
 import { MangaCard } from "../_components/manga-card";
 import { Search as SearchIcon } from "lucide-react";
 
 export default function SearchPage() {
-  // Simulate search results with a slice of the library
-  const searchResults = mangaLibrary.slice(0, 6);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const searchResults = mangaLibrary.filter((manga) =>
+    manga.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="container mx-auto">
@@ -16,16 +22,24 @@ export default function SearchPage() {
           type="search"
           placeholder="Buscar um mangá, manhwa ou webtoon..."
           className="pl-10 text-base"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
       <div>
-        <h2 className="text-2xl font-headline font-semibold mb-4">Descubra</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+        <h2 className="text-2xl font-headline font-semibold mb-4">
+          {searchTerm ? `Resultados para "${searchTerm}"` : "Descubra"}
+        </h2>
+        {searchResults.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
             {searchResults.map((manga) => (
-                <MangaCard key={manga.id} manga={manga} />
+              <MangaCard key={manga.id} manga={manga} />
             ))}
-        </div>
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-8">Nenhum título encontrado.</p>
+        )}
       </div>
     </div>
   );
