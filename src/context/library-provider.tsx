@@ -24,30 +24,35 @@ const generateMangaDexId = (title: string) => `md-${title.toLowerCase().replace(
 const LOCAL_STORAGE_KEY = 'mangatrack-library';
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
-  const [library, setLibrary] = useState<Manga[]>(() => {
-    // Carrega a biblioteca do localStorage na inicialização
-    if (typeof window === 'undefined') {
-      return initialLibrary;
-    }
+  const [library, setLibrary] = useState<Manga[]>(initialLibrary);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const { toast } = useToast();
+
+  // Carrega a biblioteca do localStorage no lado do cliente, após a montagem
+  useEffect(() => {
     try {
       const savedLibrary = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-      return savedLibrary ? JSON.parse(savedLibrary) : initialLibrary;
+      if (savedLibrary) {
+        setLibrary(JSON.parse(savedLibrary));
+      }
     } catch (error) {
       console.error("Erro ao carregar a biblioteca do localStorage", error);
-      return initialLibrary;
+    } finally {
+      setIsLoaded(true);
     }
-  });
-  
-  const { toast } = useToast();
+  }, []);
 
   // Salva a biblioteca no localStorage sempre que ela mudar
   useEffect(() => {
-    try {
-      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(library));
-    } catch (error) {
-      console.error("Erro ao salvar a biblioteca no localStorage", error);
+    // Só salva no localStorage depois que os dados iniciais foram carregados
+    if (isLoaded) {
+      try {
+        window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(library));
+      } catch (error) {
+        console.error("Erro ao salvar a biblioteca no localStorage", error);
+      }
     }
-  }, [library]);
+  }, [library, isLoaded]);
 
 
   const isMangaInLibrary = (mangaId: number, title?: string) => {
