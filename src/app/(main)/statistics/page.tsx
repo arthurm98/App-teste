@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GenreChart } from "./_components/genre-chart";
-import { StatusChart } from "./_components/status-chart";
+import { GenreChart } from "../_components/genre-chart";
+import { StatusChart } from "../_components/status-chart";
 
 export default function StatisticsPage() {
     return (

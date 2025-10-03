@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { mangaLibrary } from "@/lib/data";
-import { MangaCard } from "./_components/manga-card";
+import { MangaCard } from "../_components/manga-card";
 import { Search as SearchIcon } from "lucide-react";
 
 export default function SearchPage() {
