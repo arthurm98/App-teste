@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookOpen, Search, Library } from "lucide-react";
+import { BarChart3, BookOpen, Search, Library, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/icons";
 import {
@@ -18,6 +18,7 @@ const menuItems = [
   { href: "/", label: "Biblioteca", icon: Library },
   { href: "/search", label: "Busca", icon: Search },
   { href: "/statistics", label: "Estatísticas", icon: BarChart3 },
+  { href: "/settings", label: "Configurações", icon: Settings },
 ];
 
 export function AppSidebar() {
