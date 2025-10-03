@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, BookOpen, Search, Library, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Logo } from "@/components/icons";
 import {
   Sidebar,
   SidebarHeader,
@@ -27,7 +26,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <Link href="/" className="flex flex-col items-start gap-0">
+        <Link href="/" className="flex flex-col items-center gap-0">
             <h1 className="text-xl font-headline font-semibold text-primary">MangaTrack</h1>
             <p className="text-[10px] text-muted-foreground font-sans">by ArthurM</p>
         </Link>
