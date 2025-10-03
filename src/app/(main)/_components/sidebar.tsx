@@ -27,8 +27,9 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex flex-col items-start gap-0">
             <h1 className="text-xl font-headline font-semibold text-primary">MangaTrack</h1>
+            <p className="text-[10px] text-muted-foreground font-sans">by ArthurM</p>
         </Link>
       </SidebarHeader>
       <SidebarContent>
