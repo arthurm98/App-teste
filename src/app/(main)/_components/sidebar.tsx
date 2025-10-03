@@ -28,7 +28,6 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <Link href="/" className="flex items-center gap-2">
-            <Logo className="w-8 h-8 text-primary" />
             <h1 className="text-xl font-headline font-semibold text-primary">MangaTrack</h1>
         </Link>
       </SidebarHeader>
