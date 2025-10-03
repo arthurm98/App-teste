@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useState, ReactNode } from 'react';
+import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import { Manga, MangaStatus, mangaLibrary as initialLibrary } from '@/lib/data';
 import { JikanManga } from '@/lib/jikan-data';
 import { useToast } from '@/hooks/use-toast';
@@ -21,10 +21,34 @@ export const LibraryContext = createContext<LibraryContextType | undefined>(unde
 // Helper para gerar um ID único para itens da MangaDex
 const generateMangaDexId = (title: string) => `md-${title.toLowerCase().replace(/\s+/g, '-')}`;
 
+const LOCAL_STORAGE_KEY = 'mangatrack-library';
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
-  const [library, setLibrary] = useState<Manga[]>(initialLibrary);
+  const [library, setLibrary] = useState<Manga[]>(() => {
+    // Carrega a biblioteca do localStorage na inicialização
+    if (typeof window === 'undefined') {
+      return initialLibrary;
+    }
+    try {
+      const savedLibrary = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+      return savedLibrary ? JSON.parse(savedLibrary) : initialLibrary;
+    } catch (error) {
+      console.error("Erro ao carregar a biblioteca do localStorage", error);
+      return initialLibrary;
+    }
+  });
+  
   const { toast } = useToast();
+
+  // Salva a biblioteca no localStorage sempre que ela mudar
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(library));
+    } catch (error) {
+      console.error("Erro ao salvar a biblioteca no localStorage", error);
+    }
+  }, [library]);
+
 
   const isMangaInLibrary = (mangaId: number, title?: string) => {
     if (mangaId > 0) {
