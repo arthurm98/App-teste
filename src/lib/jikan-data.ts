@@ -17,7 +17,7 @@ export type JikanManga = {
       };
     };
     title: string;
-    type: string;
+    type: string | null;
     chapters: number | null;
     status: string;
     score: number | null;

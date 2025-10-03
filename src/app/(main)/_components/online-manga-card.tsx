@@ -20,7 +20,15 @@ interface OnlineMangaCardProps {
 
 export function OnlineMangaCard({ manga }: OnlineMangaCardProps) {
   const { addToLibrary, isMangaInLibrary } = useLibrary();
-  const isInLibrary = isMangaInLibrary(manga.mal_id);
+  // A busca por ID do Jikan é mais confiável. Se não houver, verificamos por título (fallback para MangaDex)
+  const isInLibrary = manga.mal_id ? isMangaInLibrary(manga.mal_id) : isMangaInLibrary(0, manga.title);
+
+
+  const handleAdd = () => {
+    if (!isInLibrary) {
+        addToLibrary(manga)
+    }
+  }
 
   return (
     <Card className="group flex flex-col overflow-hidden">
@@ -39,7 +47,7 @@ export function OnlineMangaCard({ manga }: OnlineMangaCardProps) {
             {manga.title}
         </CardTitle>
         <div className="mt-auto pt-2 space-y-2">
-           <div className="text-sm text-muted-foreground">
+           <div className="text-sm text-muted-foreground truncate">
             {manga.score && (
                 <span>Nota: {manga.score.toFixed(2)}</span>
             )}
@@ -47,11 +55,12 @@ export function OnlineMangaCard({ manga }: OnlineMangaCardProps) {
             {manga.chapters && (
                 <span>{manga.chapters} caps</span>
             )}
+            {(!manga.score && !manga.chapters) && <span>&nbsp;</span>}
            </div>
            <Button 
              variant={isInLibrary ? "secondary" : "default"} 
              className="w-full" 
-             onClick={() => !isInLibrary && addToLibrary(manga)}
+             onClick={handleAdd}
              disabled={isInLibrary}
             >
               {isInLibrary ? <Check className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}

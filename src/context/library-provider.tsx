@@ -10,30 +10,43 @@ interface LibraryContextType {
   addToLibrary: (manga: JikanManga) => void;
   removeFromLibrary: (mangaId: string) => void;
   updateChapter: (mangaId: string, newChapter: number) => void;
-  isMangaInLibrary: (mangaId: number) => boolean;
+  isMangaInLibrary: (mangaId: number, title?: string) => boolean;
   restoreLibrary: (newLibrary: Manga[]) => void;
 }
 
 export const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
 
+// Helper para gerar um ID único para itens da MangaDex
+const generateMangaDexId = (title: string) => `md-${title.toLowerCase().replace(/\s+/g, '-')}`;
+
+
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const [library, setLibrary] = useState<Manga[]>(initialLibrary);
   const { toast } = useToast();
 
-  const isMangaInLibrary = (mangaId: number) => {
-    return library.some(m => m.id === String(mangaId));
+  const isMangaInLibrary = (mangaId: number, title?: string) => {
+    if (mangaId > 0) {
+      return library.some(m => m.id === String(mangaId));
+    }
+    if (title) {
+      return library.some(m => m.id === generateMangaDexId(title) || m.title.toLowerCase() === title.toLowerCase());
+    }
+    return false;
   }
 
   const addToLibrary = (manga: JikanManga) => {
-    if (isMangaInLibrary(manga.mal_id)) {
+    if (isMangaInLibrary(manga.mal_id, manga.title)) {
         toast({
             title: "Já está na biblioteca",
             description: `${manga.title} já foi adicionado.`,
         });
         return;
     }
+
+    const mangaId = manga.mal_id > 0 ? String(manga.mal_id) : generateMangaDexId(manga.title);
+    
     const newManga: Manga = {
-        id: String(manga.mal_id),
+        id: mangaId,
         title: manga.title,
         type: (manga.type as Manga['type']) || "Mangá",
         status: "Planejo Ler",
@@ -66,7 +79,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     setLibrary(prev => prev.map(m => {
         if (m.id === mangaId) {
             const updatedManga = { ...m, readChapters: newChapter };
-            if (updatedManga.readChapters > 0 && updatedManga.readChapters >= updatedManga.totalChapters && updatedManga.status !== 'Completo') {
+            if (updatedManga.totalChapters > 0 && updatedManga.readChapters >= updatedManga.totalChapters && updatedManga.status !== 'Completo') {
                 updatedManga.status = 'Completo';
                 toast({
                     title: "Título Concluído!",
