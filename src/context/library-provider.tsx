@@ -11,6 +11,7 @@ interface LibraryContextType {
   removeFromLibrary: (mangaId: string) => void;
   updateChapter: (mangaId: string, newChapter: number) => void;
   isMangaInLibrary: (mangaId: number) => boolean;
+  restoreLibrary: (newLibrary: Manga[]) => void;
 }
 
 export const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
@@ -65,7 +66,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     setLibrary(prev => prev.map(m => {
         if (m.id === mangaId) {
             const updatedManga = { ...m, readChapters: newChapter };
-            if (updatedManga.readChapters === updatedManga.totalChapters && updatedManga.status !== 'Completo') {
+            if (updatedManga.readChapters > 0 && updatedManga.readChapters >= updatedManga.totalChapters && updatedManga.status !== 'Completo') {
                 updatedManga.status = 'Completo';
                 toast({
                     title: "Título Concluído!",
@@ -82,8 +83,12 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const restoreLibrary = (newLibrary: Manga[]) => {
+    setLibrary(newLibrary);
+  }
+
   return (
-    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, isMangaInLibrary }}>
+    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, isMangaInLibrary, restoreLibrary }}>
       {children}
     </LibraryContext.Provider>
   );
