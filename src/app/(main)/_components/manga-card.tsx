@@ -1,21 +1,21 @@
+
 "use client";
 
 import Image from "next/image";
-import type { Manga } from "@/lib/data";
+import type { Manga, MangaStatus } from "@/lib/data";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import {
   Card,
   CardContent,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, Trash2, X } from "lucide-react";
+import { Minus, Plus, Trash2, Check, BookOpen, Clock } from "lucide-react";
 import { useLibrary } from "@/hooks/use-library";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { MoreVertical } from "lucide-react";
 
 
@@ -24,7 +24,7 @@ interface MangaCardProps {
 }
 
 export function MangaCard({ manga }: MangaCardProps) {
-  const { updateChapter, removeFromLibrary } = useLibrary();
+  const { updateChapter, removeFromLibrary, updateStatus } = useLibrary();
 
   const imagePlaceholder = PlaceHolderImages.find(p => p.id === manga.coverImageId);
   const imageUrl = manga.imageUrl || imagePlaceholder?.imageUrl || "https://picsum.photos/seed/placeholder/400/600";
@@ -34,6 +34,10 @@ export function MangaCard({ manga }: MangaCardProps) {
     const newChapter = Math.max(0, Math.min(manga.totalChapters, manga.readChapters + amount));
     updateChapter(manga.id, newChapter);
   };
+  
+  const handleStatusChange = (status: MangaStatus) => {
+    updateStatus(manga.id, status);
+  }
 
   return (
     <Card className="group flex flex-col overflow-hidden">
@@ -55,7 +59,20 @@ export function MangaCard({ manga }: MangaCardProps) {
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => removeFromLibrary(manga.id)} className="text-destructive">
+                    <DropdownMenuItem onClick={() => handleStatusChange("Lendo")} disabled={manga.status === 'Lendo'}>
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        <span>Marcar como "Lendo"</span>
+                    </DropdownMenuItem>
+                     <DropdownMenuItem onClick={() => handleStatusChange("Planejo Ler")} disabled={manga.status === 'Planejo Ler'}>
+                        <Clock className="mr-2 h-4 w-4" />
+                        <span>Marcar como "Planejo Ler"</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleStatusChange("Completo")} disabled={manga.status === 'Completo'}>
+                        <Check className="mr-2 h-4 w-4" />
+                        <span>Marcar como "Completo"</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => removeFromLibrary(manga.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                         <Trash2 className="mr-2 h-4 w-4" />
                         <span>Remover</span>
                     </DropdownMenuItem>
@@ -86,7 +103,7 @@ export function MangaCard({ manga }: MangaCardProps) {
         )}
         {manga.status === "Planejo Ler" && (
              <div className="mt-auto">
-                <Button variant="secondary" className="w-full" onClick={() => handleChapterChange(1)}>
+                <Button variant="secondary" className="w-full" onClick={() => handleStatusChange("Lendo")}>
                     <Plus className="mr-2 h-4 w-4" /> Começar a Ler
                 </Button>
             </div>

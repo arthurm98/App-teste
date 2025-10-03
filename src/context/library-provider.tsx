@@ -1,7 +1,8 @@
+
 "use client";
 
 import React, { createContext, useState, ReactNode } from 'react';
-import { Manga, mangaLibrary as initialLibrary } from '@/lib/data';
+import { Manga, MangaStatus, mangaLibrary as initialLibrary } from '@/lib/data';
 import { JikanManga } from '@/lib/jikan-data';
 import { useToast } from '@/hooks/use-toast';
 
@@ -10,6 +11,7 @@ interface LibraryContextType {
   addToLibrary: (manga: JikanManga) => void;
   removeFromLibrary: (mangaId: string) => void;
   updateChapter: (mangaId: string, newChapter: number) => void;
+  updateStatus: (mangaId: string, newStatus: MangaStatus) => void;
   isMangaInLibrary: (mangaId: number, title?: string) => boolean;
   restoreLibrary: (newLibrary: Manga[]) => void;
 }
@@ -79,20 +81,43 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     setLibrary(prev => prev.map(m => {
         if (m.id === mangaId) {
             const updatedManga = { ...m, readChapters: newChapter };
+            
             if (updatedManga.totalChapters > 0 && updatedManga.readChapters >= updatedManga.totalChapters && updatedManga.status !== 'Completo') {
                 updatedManga.status = 'Completo';
                 toast({
                     title: "Título Concluído!",
                     description: `Você terminou de ler ${updatedManga.title}.`,
                 });
-            }
-             // Se o usuário começar a ler um mangá que planejava ler
-            if (updatedManga.readChapters > 0 && updatedManga.status === 'Planejo Ler') {
+            } else if (updatedManga.readChapters > 0 && updatedManga.status === 'Planejo Ler') {
                 updatedManga.status = 'Lendo';
+            } else if (updatedManga.readChapters <= 0 && updatedManga.status === 'Lendo') {
+                updatedManga.status = 'Planejo Ler';
             }
+
             return updatedManga;
         }
         return m;
+    }));
+  };
+
+  const updateStatus = (mangaId: string, newStatus: MangaStatus) => {
+    setLibrary(prev => prev.map(manga => {
+        if (manga.id === mangaId) {
+            const updatedManga = { ...manga, status: newStatus };
+            if (newStatus === "Completo" && manga.totalChapters > 0) {
+                updatedManga.readChapters = manga.totalChapters;
+            } else if (newStatus === "Planejo Ler") {
+                updatedManga.readChapters = 0;
+            } else if (newStatus === "Lendo" && manga.readChapters === 0 && manga.totalChapters > 0) {
+                 // updatedManga.readChapters = 1; // Opcional: começar a ler a partir do cap 1
+            }
+             toast({
+                title: "Status Atualizado",
+                description: `O status de "${manga.title}" foi alterado para ${newStatus}.`,
+            });
+            return updatedManga;
+        }
+        return manga;
     }));
   };
 
@@ -101,7 +126,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, isMangaInLibrary, restoreLibrary }}>
+    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary }}>
       {children}
     </LibraryContext.Provider>
   );
