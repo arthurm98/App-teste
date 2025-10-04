@@ -43,7 +43,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     const fetchMangas = async () => {
-      if (searchTerm.length < 3) {
+      if (searchTerm.trim().length < 3) {
         setSearchResults([]);
         return;
       }
@@ -55,7 +55,7 @@ export default function SearchPage() {
       // 1. Tentar buscar na API Jikan
       try {
         const response = await fetch(
-          `https://api.jikan.moe/v4/manga?q=${encodeURIComponent(searchTerm)}&sfw`
+          `https://api.jikan.moe/v4/manga?q=${encodeURIComponent(searchTerm.trim())}&sfw`
         );
         if (response.ok) {
           const data = await response.json();
@@ -72,7 +72,7 @@ export default function SearchPage() {
       // 2. Se Jikan falhar ou não retornar resultados, tentar MangaDex (fallback)
       if (results.length === 0) {
         try {
-          const mangaResponse = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(searchTerm)}&includes[]=cover_art`);
+          const mangaResponse = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(searchTerm.trim())}&includes[]=cover_art`);
           if (mangaResponse.ok) {
             const mangaData = await mangaResponse.json();
             if (mangaData.data && mangaData.data.length > 0) {
@@ -133,8 +133,8 @@ export default function SearchPage() {
 
       <div>
         <h2 className="text-2xl font-headline font-semibold mb-4">
-          {searchTerm.length >= 3
-            ? `Resultados para "${searchTerm}"`
+          {searchTerm.trim().length >= 3
+            ? `Resultados para "${searchTerm.trim()}"`
             : "Digite ao menos 3 caracteres para buscar"}
         </h2>
         {isLoading ? (
@@ -155,7 +155,7 @@ export default function SearchPage() {
             ))}
           </div>
         ) : (
-          searchTerm.length >= 3 && <p className="text-muted-foreground text-center py-8">Nenhum título encontrado.</p>
+          searchTerm.trim().length >= 3 && <p className="text-muted-foreground text-center py-8">Nenhum título encontrado.</p>
         )}
       </div>
     </div>
