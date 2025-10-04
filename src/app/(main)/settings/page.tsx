@@ -6,14 +6,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useLibrary } from "@/hooks/use-library";
 import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/firebase";
 
 export default function SettingsPage() {
     const { library, restoreLibrary } = useLibrary();
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { user } = useUser();
+
 
     const handleBackup = () => {
         try {
+            if (library.length === 0) {
+                toast({
+                    variant: "destructive",
+                    title: "Biblioteca Vazia",
+                    description: "Não há nada para fazer backup.",
+                });
+                return;
+            }
             const dataStr = JSON.stringify(library, null, 2);
             const dataBlob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(dataBlob);
@@ -39,6 +50,14 @@ export default function SettingsPage() {
     };
 
     const handleRestoreClick = () => {
+        if (user) {
+            toast({
+                variant: "destructive",
+                title: "Função Indisponível",
+                description: "A restauração de backup não é suportada para contas logadas no momento.",
+            });
+            return;
+        }
         fileInputRef.current?.click();
     };
 
@@ -86,7 +105,7 @@ export default function SettingsPage() {
                     <CardHeader>
                         <CardTitle className="font-headline">Backup e Restauração</CardTitle>
                         <CardDescription>
-                            Faça backup dos dados da sua biblioteca ou restaure a partir de um arquivo de backup anterior.
+                            Faça backup dos dados da sua biblioteca ou restaure a partir de um arquivo de backup anterior. O backup só funciona no modo offline.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="flex gap-4">

@@ -10,18 +10,20 @@ import { Header } from "@/components/layout/header";
 import { Book } from 'lucide-react';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
-function ProtectedLayout({ children }: { children: React.ReactNode }) {
+export default function MainLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    // Se o carregamento do usuário terminou e não há usuário, redirecione para o login.
     if (!isUserLoading && !user) {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
 
-  // Enquanto o status de autenticação está carregando, mostre um indicador de loading.
   if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -30,9 +32,11 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Se houver um usuário, mostre o conteúdo protegido.
-  if (user) {
-    return (
+  if (!user) {
+    return null;
+  }
+  
+  return (
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
@@ -43,22 +47,5 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
         </SidebarInset>
         <FirebaseErrorListener />
       </SidebarProvider>
-    );
-  }
-
-  // Retorna null ou um loader enquanto redireciona para evitar flash de conteúdo.
-  return null;
-}
-
-
-export default function MainLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <ProtectedLayout>
-      {children}
-    </ProtectedLayout>
   );
 }

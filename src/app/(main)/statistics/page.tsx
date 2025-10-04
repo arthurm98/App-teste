@@ -1,10 +1,7 @@
 
-"use client"
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import dynamic from 'next/dynamic';
-import { useLibrary } from "@/hooks/use-library";
 
 const GenreChart = dynamic(() => import('../_components/genre-chart').then(mod => mod.GenreChart), { 
     ssr: false,
@@ -34,7 +31,6 @@ const StatsCards = dynamic(() => import('../_components/stats-cards').then(mod =
 });
 
 export default function StatisticsPage() {
-    const { isLoading } = useLibrary();
 
     return (
         <div className="container mx-auto">
@@ -48,7 +44,7 @@ export default function StatisticsPage() {
                         <CardTitle className="font-headline">Top Gêneros</CardTitle>
                     </CardHeader>
                     <CardContent>
-                       {isLoading ? <Skeleton className="h-[300px]" /> : <GenreChart />}
+                       <GenreChart />
                     </CardContent>
                 </Card>
                 <Card className="lg:col-span-3">
@@ -56,7 +52,7 @@ export default function StatisticsPage() {
                         <CardTitle className="font-headline">Distribuição por Status</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {isLoading ? <Skeleton className="h-[300px]" /> : <StatusChart />}
+                        <StatusChart />
                     </CardContent>
                 </Card>
             </div>
