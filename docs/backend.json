@@ -1,134 +1,77 @@
+
 {
   "entities": {
     "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
       "description": "Represents a user of the MangaTrack application.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the user entity."
-        },
-        "username": {
-          "type": "string",
-          "description": "The username of the user."
+          "description": "Unique identifier for the user entity (same as Firebase Auth UID)."
         },
         "email": {
           "type": "string",
           "description": "The email address of the user.",
           "format": "email"
         },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
         "createdAt": {
           "type": "string",
           "description": "The timestamp indicating when the user account was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "The timestamp indicating when the user account was last updated.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
-        "username",
         "email",
-        "createdAt",
-        "updatedAt"
+        "createdAt"
       ]
     },
     "Manga": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Manga",
       "type": "object",
-      "description": "Represents a manga, manhwa, or webtoon title.",
+      "description": "Represents a manga, manhwa, or webtoon title in a user's library.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the manga entity."
+          "description": "Unique identifier for the manga entity. Can be from MAL, MangaDex, etc."
         },
         "title": {
           "type": "string",
           "description": "The title of the manga."
-        },
-        "altTitle": {
-          "type": "string",
-          "description": "The alternative title of the manga."
         },
         "imageUrl": {
           "type": "string",
           "description": "URL of the manga's cover image.",
           "format": "uri"
         },
-        "source": {
+        "type": {
           "type": "string",
-          "description": "Source of the manga information (e.g., Kitsu, MangaDex)."
-        },
-        "sourceId": {
-          "type": "string",
-          "description": "Identifier used by the source to identify this manga."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief summary or description of the manga."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "The timestamp indicating when the manga was added.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "The timestamp indicating when the manga was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "title",
-        "imageUrl",
-        "source",
-        "sourceId",
-        "description",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "LibraryEntry": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "LibraryEntry",
-      "type": "object",
-      "description": "Represents a user's entry of a manga in their library, tracking reading status and progress.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the library entry."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N LibraryEntry)"
-        },
-        "mangaId": {
-          "type": "string",
-          "description": "Reference to Manga. (Relationship: Manga 1:N LibraryEntry)"
+          "enum": ["Mangá", "Manhwa", "Webtoon"]
         },
         "status": {
           "type": "string",
-          "description": "The reading status of the manga (e.g., Reading, Plan to Read, Completed).",
-          "format": "string"
+          "enum": ["Lendo", "Planejo Ler", "Completo"],
+          "description": "The reading status of the manga."
         },
-        "lastReadChapter": {
+        "totalChapters": {
           "type": "number",
-          "description": "The last chapter the user read."
+          "description": "The total number of chapters."
         },
-        "progress": {
+        "readChapters": {
           "type": "number",
-          "description": "The reading progress of the manga."
+          "description": "The number of chapters the user has read."
         },
-        "notes": {
-          "type": "string",
-          "description": "Any additional notes or comments the user has about the manga."
+        "genres": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "List of genres for the manga."
         },
         "createdAt": {
           "type": "string",
@@ -143,153 +86,33 @@
       },
       "required": [
         "id",
-        "userId",
-        "mangaId",
+        "title",
+        "type",
         "status",
-        "lastReadChapter",
-        "progress",
+        "totalChapters",
+        "readChapters",
         "createdAt",
         "updatedAt"
-      ]
-    },
-    "Genre": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Genre",
-      "type": "object",
-      "description": "Represents a genre of manga.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the genre entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the genre (e.g., Action, Comedy, Sci-Fi)."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the genre."
-        }
-      },
-      "required": [
-        "id",
-        "name"
-      ]
-    },
-    "MangaGenre": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "MangaGenre",
-      "type": "object",
-      "description": "Represents the relationship between mangas and genres (Many-to-Many relationship).",
-      "properties": {
-        "mangaId": {
-          "type": "string",
-          "description": "Reference to Manga. (Relationship: Manga N:N Genre)"
-        },
-        "genreId": {
-          "type": "string",
-          "description": "Reference to Genre. (Relationship: Manga N:N Genre)"
-        }
-      },
-      "required": [
-        "mangaId",
-        "genreId"
       ]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profile information.  Uses path-based ownership for private user data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            }
-          ]
-        }
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
       },
-      {
-        "path": "/mangas/{mangaId}",
-        "definition": {
-          "entityName": "Manga",
-          "schema": {
-            "$ref": "#/backend/entities/Manga"
-          },
-          "description": "Stores manga information.",
-          "params": [
-            {
-              "name": "mangaId",
-              "description": "The unique identifier for the manga."
-            }
-          ]
-        }
+      "description": "Stores public user profile information. The document ID is the same as the Firebase Auth UID."
+    },
+    "/users/{userId}/library/{mangaId}": {
+      "schema": {
+        "$ref": "#/entities/Manga"
       },
-      {
-        "path": "/users/{userId}/libraryEntries/{libraryEntryId}",
-        "definition": {
-          "entityName": "LibraryEntry",
-          "schema": {
-            "$ref": "#/backend/entities/LibraryEntry"
-          },
-          "description": "Stores library entries for each user, tracking reading progress. Uses path-based ownership, enabling straightforward security rules.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "libraryEntryId",
-              "description": "The unique identifier for the library entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/genres/{genreId}",
-        "definition": {
-          "entityName": "Genre",
-          "schema": {
-            "$ref": "#/backend/entities/Genre"
-          },
-          "description": "Stores manga genres.",
-          "params": [
-            {
-              "name": "genreId",
-              "description": "The unique identifier for the genre."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/mangaGenres/{mangaGenreId}",
-        "definition": {
-          "entityName": "MangaGenre",
-          "schema": {
-            "$ref": "#/backend/entities/MangaGenre"
-          },
-          "description": "Stores the relationship between mangas and genres.",
-          "params": [
-            {
-              "name": "mangaGenreId",
-              "description": "The unique identifier for the manga genre relationship."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the MangaTrack application.  The core principle is to avoid using `get()` calls in security rules by denormalizing authorization data, enabling atomic operations and simplifying debugging.  This architecture uses path-based ownership for user-specific data and structural segregation to maintain a homogeneous security posture within each collection.\n\n*   **Users:** User data is stored in the `/users/{userId}` collection.  This structure facilitates easy management of individual user profiles and related data.\n*   **Manga:** Manga data is stored in the `/mangas/{mangaId}` collection. There is no user specific data stored in this collection, so no denormalization is needed.\n*   **Library Entries:** Each user's library entries, representing their manga reading progress, are stored under `/users/{userId}/libraryEntries/{libraryEntryId}`. This path-based ownership model simplifies security rules, allowing users full control over their library entries.\n*   **Genres:** Genre data is stored in the `/genres/{genreId}` collection.\n*   **Manga-Genre relationships**: These relationships are stored in the `/mangaGenres/{mangaGenreId}` collection.\n\nThis structure supports the required QAPs (Rules are not Filters) by ensuring that list operations can be secured effectively. Path-based ownership for library entries, eliminates the need for complex filtering in security rules, thus enhancing performance and security."
+      "description": "Stores the manga entries for a user's personal library. Path-based ownership ensures users can only access their own library."
+    }
   }
 }

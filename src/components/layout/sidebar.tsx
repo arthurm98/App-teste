@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookOpen, Search, Library, Settings } from "lucide-react";
+import { BarChart3, Search, Library, Settings, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
@@ -13,6 +13,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
+import { useUser } from "@/firebase";
 
 const menuItems = [
   { href: "/", label: "Biblioteca", icon: Library },
@@ -21,8 +22,12 @@ const menuItems = [
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
 
+const authMenuItem = { href: "/login", label: "Login", icon: LogIn };
+
 export function AppSidebar() {
-    const pathname = usePathname();
+  const pathname = usePathname();
+  const { user, isUserLoading } = useUser();
+  const items = user ? menuItems : [...menuItems, authMenuItem];
 
   return (
     <Sidebar>
@@ -34,7 +39,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {menuItems.map((item) => (
+          {!isUserLoading && items.map((item) => (
             <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild

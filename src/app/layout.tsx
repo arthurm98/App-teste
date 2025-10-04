@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { LibraryProvider } from '@/context/library-provider';
 import { poppins } from './fonts';
 import { cn } from '@/lib/utils';
+import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'MangaTrack',
@@ -25,10 +26,12 @@ export default function RootLayout({
       </head>
       <body className={cn("font-body antialiased", poppins.variable)}>
         <ThemeProvider>
-          <LibraryProvider>
-            {children}
-            <Toaster />
-          </LibraryProvider>
+          <FirebaseClientProvider>
+            <LibraryProvider>
+              {children}
+              <Toaster />
+            </LibraryProvider>
+          </FirebaseClientProvider>
         </ThemeProvider>
       </body>
     </html>
