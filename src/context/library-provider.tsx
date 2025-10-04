@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { createContext, useState, ReactNode, useEffect } from 'react';
-import { Manga, MangaStatus, mangaLibrary as initialLibrary } from '@/lib/data';
+import React, { createContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { Manga, MangaStatus } from '@/lib/data';
 import { JikanManga } from '@/lib/jikan-data';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,7 +25,7 @@ const generateMangaDexId = (title: string) => `md-${title.toLowerCase().replace(
 const LOCAL_STORAGE_KEY = 'mangatrack-library';
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
-  const [library, setLibrary] = useState<Manga[]>(initialLibrary);
+  const [library, setLibrary] = useState<Manga[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const { toast } = useToast();
 
@@ -55,8 +55,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
   }, [library, isLoaded]);
 
-
-  const isMangaInLibrary = (mangaId: number, title?: string) => {
+  const isMangaInLibrary = useCallback((mangaId: number, title?: string) => {
     if (mangaId > 0) {
       return library.some(m => m.id === String(mangaId));
     }
@@ -64,9 +63,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       return library.some(m => m.id === generateMangaDexId(title) || m.title.toLowerCase() === title.toLowerCase());
     }
     return false;
-  }
+  }, [library]);
 
-  const addToLibrary = (manga: JikanManga) => {
+  const addToLibrary = useCallback((manga: JikanManga) => {
     if (isMangaInLibrary(manga.mal_id, manga.title)) {
         toast({
             title: "Já está na biblioteca",
@@ -93,9 +92,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         title: "Adicionado à Biblioteca",
         description: `${manga.title} foi adicionado à sua lista 'Planejo Ler'.`,
     });
-  };
+  }, [isMangaInLibrary, toast]);
 
-  const removeFromLibrary = (mangaId: string) => {
+  const removeFromLibrary = useCallback((mangaId: string) => {
     const manga = library.find(m => m.id === mangaId);
     setLibrary(prev => prev.filter(m => m.id !== mangaId));
     if (manga) {
@@ -105,19 +104,20 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
             variant: "destructive"
         });
     }
-  };
+  }, [library, toast]);
 
-  const updateChapter = (mangaId: string, newChapter: number) => {
+  const updateChapter = useCallback((mangaId: string, newChapter: number) => {
+    let mangaTitleForToast: string | undefined;
+    let shouldShowCompletedToast = false;
+
     setLibrary(prev => prev.map(m => {
         if (m.id === mangaId) {
             const updatedManga = { ...m, readChapters: newChapter };
             
             if (updatedManga.totalChapters > 0 && updatedManga.readChapters >= updatedManga.totalChapters && updatedManga.status !== 'Completo') {
                 updatedManga.status = 'Completo';
-                toast({
-                    title: "Título Concluído!",
-                    description: `Você terminou de ler ${updatedManga.title}.`,
-                });
+                mangaTitleForToast = updatedManga.title;
+                shouldShowCompletedToast = true;
             } else if (updatedManga.readChapters > 0 && updatedManga.status === 'Planejo Ler') {
                 updatedManga.status = 'Lendo';
             } else if (updatedManga.readChapters <= 0 && updatedManga.status === 'Lendo') {
@@ -128,58 +128,71 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         }
         return m;
     }));
-  };
 
-  const updateStatus = (mangaId: string, newStatus: MangaStatus) => {
+    if (shouldShowCompletedToast && mangaTitleForToast) {
+        toast({
+            title: "Título Concluído!",
+            description: `Você terminou de ler ${mangaTitleForToast}.`,
+        });
+    }
+  }, [toast]);
+
+  const updateStatus = useCallback((mangaId: string, newStatus: MangaStatus) => {
+    let mangaTitleForToast: string | undefined;
+
     setLibrary(prev => prev.map(manga => {
         if (manga.id === mangaId) {
+            mangaTitleForToast = manga.title;
             const updatedManga = { ...manga, status: newStatus };
             if (newStatus === "Completo" && manga.totalChapters > 0) {
                 updatedManga.readChapters = manga.totalChapters;
             } else if (newStatus === "Planejo Ler") {
                 updatedManga.readChapters = 0;
-            } else if (newStatus === "Lendo" && manga.readChapters === 0 && manga.totalChapters > 0) {
-                 // updatedManga.readChapters = 1; // Opcional: começar a ler a partir do cap 1
             }
-             toast({
-                title: "Status Atualizado",
-                description: `O status de "${manga.title}" foi alterado para ${newStatus}.`,
-            });
             return updatedManga;
         }
         return manga;
     }));
-  };
+
+    if (mangaTitleForToast) {
+        toast({
+            title: "Status Atualizado",
+            description: `O status de "${mangaTitleForToast}" foi alterado para ${newStatus}.`,
+        });
+    }
+  }, [toast]);
   
-  const updateMangaDetails = (mangaId: string, details: Partial<Pick<Manga, 'totalChapters'>>) => {
+  const updateMangaDetails = useCallback((mangaId: string, details: Partial<Pick<Manga, 'totalChapters'>>) => {
+    let mangaTitleForToast: string | undefined;
     setLibrary(prev => prev.map(manga => {
       if (manga.id === mangaId) {
         const updatedManga = { ...manga, ...details };
+        mangaTitleForToast = updatedManga.title;
 
-        // Garante que os capítulos lidos não excedam o novo total
         if (updatedManga.readChapters > updatedManga.totalChapters) {
             updatedManga.readChapters = updatedManga.totalChapters;
         }
 
-        // Se os capítulos lidos agora correspondem ao total, marca como completo
         if (updatedManga.totalChapters > 0 && updatedManga.readChapters === updatedManga.totalChapters) {
             updatedManga.status = 'Completo';
         }
-
-        toast({
-            title: "Detalhes Atualizados",
-            description: `As informações de "${updatedManga.title}" foram salvas.`,
-        });
 
         return updatedManga;
       }
       return manga;
     }));
-  }
 
-  const restoreLibrary = (newLibrary: Manga[]) => {
+     if (mangaTitleForToast) {
+        toast({
+            title: "Detalhes Atualizados",
+            description: `As informações de "${mangaTitleForToast}" foram salvas.`,
+        });
+    }
+  }, [toast]);
+
+  const restoreLibrary = useCallback((newLibrary: Manga[]) => {
     setLibrary(newLibrary);
-  }
+  }, []);
 
   return (
     <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails }}>
