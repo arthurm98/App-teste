@@ -4,7 +4,6 @@
 import Image from "next/image";
 import { useState } from "react";
 import type { Manga, MangaStatus } from "@/lib/data";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import {
   Card,
   CardContent,
@@ -28,8 +27,7 @@ export function MangaCard({ manga }: MangaCardProps) {
   const { updateChapter, removeFromLibrary, updateStatus } = useLibrary();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const imagePlaceholder = PlaceHolderImages.find(p => p.id === manga.coverImageId);
-  const imageUrl = manga.imageUrl || imagePlaceholder?.imageUrl || "https://picsum.photos/seed/placeholder/400/600";
+  const imageUrl = manga.imageUrl || "https://picsum.photos/seed/placeholder/400/600";
   const progress = manga.totalChapters > 0 ? (manga.readChapters / manga.totalChapters) * 100 : 0;
 
   const handleChapterChange = (amount: number) => {
@@ -51,7 +49,7 @@ export function MangaCard({ manga }: MangaCardProps) {
             width={400}
             height={600}
             className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
-            data-ai-hint={imagePlaceholder?.imageHint || 'manga cover'}
+            data-ai-hint={'manga cover'}
           />
           <Badge variant="secondary" className="absolute top-2 left-2">{manga.type}</Badge>
           <div className="absolute top-1 right-1">

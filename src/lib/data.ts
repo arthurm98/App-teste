@@ -1,3 +1,4 @@
+
 export type MangaStatus = "Lendo" | "Planejo Ler" | "Completo";
 export type MangaType = "Mangá" | "Manhwa" | "Webtoon";
 
