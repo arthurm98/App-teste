@@ -2,36 +2,34 @@
  * @fileoverview Firestore Security Rules for MangaTrack application.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user profiles and library entries.
- * Public read access is granted to manga and genre data.
+ * This ruleset enforces a strict user-ownership model for user profiles and manga libraries.
+ * Each user has full control over their own profile and library data.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profile information.
- * - /mangas/{mangaId}: Stores manga information.
- * - /users/{userId}/libraryEntries/{libraryEntryId}: Stores user-specific library entries.
- * - /genres/{genreId}: Stores manga genres.
- * - /mangaGenres/{mangaGenreId}: Stores the relationships between mangas and genres.
+ * - `/users/{userId}`: Stores public user profile information.
+ * - `/users/{userId}/library/{mangaId}`: Stores individual manga entries in a user's library.
  *
  * Key Security Decisions:
- * - User profiles and library entries are only accessible to the owning user.
- * - Listing of user documents is disallowed.
- * - Public read access is allowed for mangas and genres.
- * - The mangaGenres collection is open for both reads and writes.
- *
- * Denormalization for Authorization:
- * - Library entries are stored under /users/{userId} to allow for simple path-based ownership checks.
+ * - Users can only create, read, update, and delete their own profile and manga library data.
+ * - Listing other user's libraries is disallowed.
+ * - Schema validation is relaxed in this prototyping phase, focusing on authorization.
+ * - Denormalization is not required as the data structure inherently supports path-based ownership.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Secure user profiles. Only the authenticated user can read and write their own profile.
+     * @description Rules for user profile documents.
      * @path /users/{userId}
-     * @allow (create) - User with ID 'user123' can create their profile if authenticated as 'user123'.
-     * @allow (get, update, delete) - User with ID 'user123' can read, update, or delete their profile if authenticated as 'user123'.
-     * @deny (create, get, update, delete) - User with ID 'user456' cannot access profile 'user123'.
-     * @deny (list) - No user can list all user profiles.
+     * @allow (create) User with matching ID can create their profile.
+     * @allow (get) User with matching ID can read their profile.
+     * @allow (update) User with matching ID can update their profile.
+     * @allow (delete) User with matching ID can delete their profile.
+     * @deny (create) User cannot create a profile with a mismatched ID.
+     * @deny (get) User cannot read another user's profile.
+     * @deny (update) User cannot update another user's profile.
+     * @deny (delete) User cannot delete another user's profile.
      * @principle Enforces document ownership for all operations.
      */
     match /users/{userId} {
@@ -47,36 +45,30 @@ service cloud.firestore {
         return isOwner(userId) && resource.data != null;
       }
 
-      allow get: if isSignedIn() && isOwner(userId);
+      allow get: if isOwner(userId);
       allow list: if false;
       allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isSignedIn() && isExistingOwner(userId);
-      allow delete: if isSignedIn() && isExistingOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Secure manga information. Allows public read access but restricts writes.
-     * @path /mangas/{mangaId}
-     * @allow (get, list) - Any user, authenticated or not, can read manga information.
-     * @deny (create, update, delete) - No user can create, update, or delete manga information without specific authorization (e.g., admin role, which is not defined in the IR).
-     * @principle Allows public read access with restricted writes.
-     */
-    match /mangas/{mangaId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
-    }
-
-    /**
-     * @description Secure library entries. Only the authenticated user can manage their own library entries.
-     * @path /users/{userId}/libraryEntries/{libraryEntryId}
-     * @allow (create) - User with ID 'user123' can create a library entry under their profile if authenticated as 'user123'.
-     * @allow (get, update, delete) - User with ID 'user123' can read, update, or delete their library entry if authenticated as 'user123'.
-     * @deny (create, get, update, delete) - User with ID 'user456' cannot access library entries under user 'user123'.
-     * @deny (list) - No user can list all user profiles.
+     * @description Rules for manga library entries within a user's profile.
+     * @path /users/{userId}/library/{mangaId}
+     * @allow (create) User with matching ID can create a manga entry in their library.
+     * @allow (get) User with matching ID can read a manga entry in their library.
+     * @allow (list) User with matching ID can list manga entries in their library.
+     * @allow (update) User with matching ID can update a manga entry in their library.
+     * @allow (delete) User with matching ID can delete a manga entry in their library.
+     * @deny (create) User cannot create a manga entry in another user's library.
+     * @deny (get) User cannot read a manga entry from another user's library.
+     * @deny (list) User cannot list manga entries from another user's library.
+     * @deny (update) User cannot update a manga entry in another user's library.
+     * @deny (delete) User cannot delete a manga entry from another user's library.
      * @principle Enforces document ownership for all operations.
      */
-    match /users/{userId}/libraryEntries/{libraryEntryId} {
-      function isSignedIn() {
+    match /users/{userId}/library/{mangaId} {
+       function isSignedIn() {
         return request.auth != null;
       }
 
@@ -84,41 +76,15 @@ service cloud.firestore {
         return request.auth.uid == userId;
       }
 
-      function isExistingOwner(userId) {
+       function isExistingOwner(userId) {
         return isOwner(userId) && resource.data != null;
       }
 
-      allow get: if isSignedIn() && isOwner(userId);
+      allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isExistingOwner(userId);
-      allow delete: if isSignedIn() && isExistingOwner(userId);
-    }
-
-    /**
-     * @description Secure genre information. Allows public read access but restricts writes.
-     * @path /genres/{genreId}
-     * @allow (get, list) - Any user, authenticated or not, can read genre information.
-     * @deny (create, update, delete) - No user can create, update, or delete genre information without specific authorization (e.g., admin role, which is not defined in the IR).
-     * @principle Allows public read access with restricted writes.
-     */
-    match /genres/{genreId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
-    }
-
-    /**
-     * @description Secure mangaGenre relationships. Allows public read access but restricts writes.
-     * @path /mangaGenres/{mangaGenreId}
-     * @allow (get, list) - Any user, authenticated or not, can read mangaGenre information.
-     * @deny (create, update, delete) - No user can create, update, or delete mangaGenre information without specific authorization (e.g., admin role, which is not defined in the IR).
-     * @principle Allows public read access with restricted writes.
-     */
-    match /mangaGenres/{mangaGenreId} {
-      allow get, list: if true;
-      allow create: if true;
-      allow update: if true;
-      allow delete: if true;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
   }
 }
