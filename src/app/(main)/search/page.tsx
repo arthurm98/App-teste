@@ -7,6 +7,7 @@ import { Search as SearchIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { JikanManga } from "@/lib/jikan-data";
 import type { MangaDexManga } from "@/lib/mangadex-data";
+import type { KitsuManga } from "@/lib/kitsu-data";
 import { OnlineMangaCard } from "../_components/online-manga-card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -31,6 +32,33 @@ function adaptMangaDexToJikan(manga: MangaDexManga, coverUrl: string): JikanMang
       name: tag.attributes.name.en,
       url: ""
     })),
+  };
+}
+
+// Função para adaptar os dados da Kitsu para o formato JikanManga
+function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
+  return {
+    mal_id: 0, // Kitsu não fornece mal_id
+    url: `https://kitsu.io/manga/${manga.attributes.slug}`,
+    images: {
+      jpg: { 
+        image_url: manga.attributes.posterImage?.original || "",
+        small_image_url: manga.attributes.posterImage?.small || "",
+        large_image_url: manga.attributes.posterImage?.large || "",
+       },
+      webp: { 
+        image_url: manga.attributes.posterImage?.original || "",
+        small_image_url: manga.attributes.posterImage?.small || "",
+        large_image_url: manga.attributes.posterImage?.large || "",
+       },
+    },
+    title: manga.attributes.canonicalTitle,
+    type: manga.attributes.mangaType || "manga",
+    chapters: manga.attributes.chapterCount,
+    status: manga.attributes.status,
+    score: manga.attributes.averageRating ? parseFloat(manga.attributes.averageRating) / 10 : null,
+    synopsis: manga.attributes.synopsis,
+    genres: [], // A API de busca da Kitsu não inclui gêneros
   };
 }
 
@@ -66,7 +94,7 @@ export default function SearchPage() {
       
       setIsSearching(true);
       let results: JikanManga[] = [];
-      let errorOccurred = false;
+      let finalError = false;
 
       // 1. Tentar buscar na API Jikan
       try {
@@ -82,10 +110,10 @@ export default function SearchPage() {
            console.warn("Jikan API request failed with status:", response.status);
         }
       } catch (error) {
-        // Silenciosamente ignora o erro da Jikan para tentar o fallback
+        console.warn("Jikan API request failed:", error);
       }
 
-      // 2. Se Jikan falhar ou não retornar resultados, tentar MangaDex (fallback)
+      // 2. Se Jikan falhar ou não retornar resultados, tentar MangaDex
       if (results.length === 0) {
         try {
           const mangaResponse = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art`);
@@ -101,10 +129,28 @@ export default function SearchPage() {
             }
           } else {
              console.warn("MangaDex API request failed with status:", mangaResponse.status);
-             errorOccurred = true;
           }
         } catch (error) {
-          errorOccurred = true;
+          console.warn("MangaDex API request failed:", error);
+        }
+      }
+      
+      // 3. Se ambos falharem, tentar Kitsu
+      if (results.length === 0) {
+        try {
+          const kitsuResponse = await fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(debouncedSearchTerm.trim())}`);
+           if (kitsuResponse.ok) {
+            const kitsuData = await kitsuResponse.json();
+            if (kitsuData.data && kitsuData.data.length > 0) {
+                results = kitsuData.data.map(adaptKitsuToJikan);
+            }
+          } else {
+             console.warn("Kitsu API request failed with status:", kitsuResponse.status);
+             finalError = true;
+          }
+        } catch (error) {
+            console.warn("Kitsu API request failed:", error);
+            finalError = true;
         }
       }
 
@@ -112,12 +158,12 @@ export default function SearchPage() {
         setSearchResults(results);
       });
 
-      if (errorOccurred && results.length === 0) {
+      if (finalError && results.length === 0) {
          toast({
           variant: "destructive",
           title: "Erro na Busca",
           description:
-            "Não foi possível buscar os mangás. Ambas as fontes falharam.",
+            "Não foi possível buscar os mangás. Todas as fontes falharam.",
         });
       }
 
