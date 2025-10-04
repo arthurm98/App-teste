@@ -1,11 +1,39 @@
+
 "use client";
 
 import { useLibrary } from "@/hooks/use-library";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MangaCard } from "./_components/manga-card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function LibraryPage() {
-  const { library } = useLibrary();
+  const { library, isLoading } = useLibrary();
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto">
+         <h1 className="text-3xl font-headline font-bold mb-6">Sua Biblioteca</h1>
+         <Tabs defaultValue="reading">
+           <TabsList className="grid w-full grid-cols-3 max-w-lg mb-6">
+            <TabsTrigger value="reading">Lendo (0)</TabsTrigger>
+            <TabsTrigger value="planToRead">Planejo Ler (0)</TabsTrigger>
+            <TabsTrigger value="completed">Completo (0)</TabsTrigger>
+          </TabsList>
+           <TabsContent value="reading">
+             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+               {Array.from({ length: 6 }).map((_, i) => (
+                 <div key={i} className="flex flex-col gap-2">
+                   <Skeleton className="h-[300px] w-full" />
+                   <Skeleton className="h-5 w-4/5 mt-2" />
+                   <Skeleton className="h-10 w-full mt-2" />
+                 </div>
+               ))}
+             </div>
+           </TabsContent>
+         </Tabs>
+      </div>
+    );
+  }
 
   const reading = library.filter((m) => m.status === "Lendo");
   const planToRead = library.filter((m) => m.status === "Planejo Ler");
