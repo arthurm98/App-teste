@@ -1,4 +1,5 @@
-{"use client";
+
+"use client";
 
 import { useState, useEffect, useTransition } from "react";
 import { Input } from "@/components/ui/input";
