@@ -165,7 +165,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
     if (user && firestore) {
       const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
-      setDocumentNonBlocking(docRef, { ...newManga, createdAt: Timestamp.now(), updatedAt: Timestamp.now() }, { merge: true });
+      const dataToSave = { ...newManga, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
+      setDocumentNonBlocking(docRef, dataToSave, { merge: true });
     } else {
       setLocalLibrary(prev => [...prev, newManga]);
     }
@@ -269,5 +270,3 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     </LibraryContext.Provider>
   );
 }
-
-    
