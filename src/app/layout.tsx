@@ -3,7 +3,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from "@/components/ui/toaster";
 import { LibraryProvider } from '@/context/library-provider';
-import { poppins, pt_sans } from './fonts';
+import { poppins } from './fonts';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -23,7 +23,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192x192.png"></link>
         <meta name="theme-color" content="#4F46E5" />
       </head>
-      <body className={cn("font-body antialiased", poppins.variable, pt_sans.variable)}>
+      <body className={cn("font-body antialiased", poppins.variable)}>
         <ThemeProvider>
           <LibraryProvider>
             {children}
