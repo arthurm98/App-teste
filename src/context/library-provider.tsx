@@ -14,6 +14,7 @@ interface LibraryContextType {
   updateStatus: (mangaId: string, newStatus: MangaStatus) => void;
   isMangaInLibrary: (mangaId: number, title?: string) => boolean;
   restoreLibrary: (newLibrary: Manga[]) => void;
+  updateMangaDetails: (mangaId: string, details: Partial<Pick<Manga, 'totalChapters'>>) => void;
 }
 
 export const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
@@ -149,13 +150,39 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         return manga;
     }));
   };
+  
+  const updateMangaDetails = (mangaId: string, details: Partial<Pick<Manga, 'totalChapters'>>) => {
+    setLibrary(prev => prev.map(manga => {
+      if (manga.id === mangaId) {
+        const updatedManga = { ...manga, ...details };
+
+        // Garante que os capítulos lidos não excedam o novo total
+        if (updatedManga.readChapters > updatedManga.totalChapters) {
+            updatedManga.readChapters = updatedManga.totalChapters;
+        }
+
+        // Se os capítulos lidos agora correspondem ao total, marca como completo
+        if (updatedManga.totalChapters > 0 && updatedManga.readChapters === updatedManga.totalChapters) {
+            updatedManga.status = 'Completo';
+        }
+
+        toast({
+            title: "Detalhes Atualizados",
+            description: `As informações de "${updatedManga.title}" foram salvas.`,
+        });
+
+        return updatedManga;
+      }
+      return manga;
+    }));
+  }
 
   const restoreLibrary = (newLibrary: Manga[]) => {
     setLibrary(newLibrary);
   }
 
   return (
-    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary }}>
+    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails }}>
       {children}
     </LibraryContext.Provider>
   );
