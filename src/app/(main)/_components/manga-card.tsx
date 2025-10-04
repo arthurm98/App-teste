@@ -93,7 +93,7 @@ export function MangaCard({ manga }: MangaCardProps) {
           {manga.status !== "Planejo Ler" && manga.totalChapters > 0 && (
               <div className="mt-auto space-y-2">
                   <div className="flex justify-between items-center text-xs text-muted-foreground">
-                      <span>Progresso</span>
+                      <span>Progresso ({progress.toFixed(0)}%)</span>
                       <span>{`${manga.readChapters} / ${manga.totalChapters}`}</span>
                   </div>
                   <Progress value={progress} aria-label={`${progress.toFixed(0)}% lido`} />
