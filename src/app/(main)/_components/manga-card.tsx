@@ -108,7 +108,7 @@ export function MangaCard({ manga }: MangaCardProps) {
               </div>
           )}
            {manga.status !== "Planejo Ler" && manga.totalChapters === 0 && (
-               <div className="mt-auto text-center">
+               <div className="flex-grow flex items-center justify-center">
                     <Button variant="secondary" size="sm" onClick={() => setIsEditDialogOpen(true)}>
                         <Plus className="mr-2 h-4 w-4" /> Adicionar Caps.
                     </Button>
