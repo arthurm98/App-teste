@@ -149,7 +149,7 @@ export default function LoginPage() {
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
             </div>
             <div className="flex flex-col gap-2 pt-2">
-               <Button type="submit" className="w-full" disabled={isSubsubmitting}>
+               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? 'Entrando...' : 'Entrar'}
               </Button>
               <Button
