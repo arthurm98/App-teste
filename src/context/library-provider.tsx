@@ -6,7 +6,7 @@ import { collection, doc, onSnapshot, writeBatch, Timestamp, Firestore, Unsubscr
 import { Manga, MangaStatus } from '@/lib/data';
 import { JikanManga } from '@/lib/jikan-data';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface LibraryContextType {
@@ -72,7 +72,11 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         setCloudLibrary(cloudData);
         setIsCloudLoading(false);
       }, error => {
-        console.error("Error fetching cloud library:", error);
+        const contextualError = new FirestorePermissionError({
+            operation: 'list',
+            path: libCollection.path,
+        });
+        errorEmitter.emit('permission-error', contextualError);
         toast({
           variant: "destructive",
           title: "Erro ao buscar dados",
@@ -90,7 +94,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   // Sync local to cloud on login
   useEffect(() => {
     if (user && firestore && isLocalLoaded && !isCloudLoading && localLibrary.length > 0) {
-      const syncLocalToCloud = async () => {
+      const syncLocalToCloud = () => {
         const batch = writeBatch(firestore);
         let itemsToSync = 0;
         
@@ -98,29 +102,33 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
           const cloudManga = cloudLibrary.find(m => m.id === localManga.id);
           if (!cloudManga) {
             const docRef = doc(firestore, 'users', user.uid, 'library', localManga.id);
-            batch.set(docRef, { ...localManga, createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
+            const mangaData = { ...localManga, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
+            batch.set(docRef, mangaData);
             itemsToSync++;
           }
         });
         
         if (itemsToSync > 0) {
-          try {
-            await batch.commit();
+           batch.commit().then(() => {
             toast({
               title: "Sincronização Concluída",
               description: `${itemsToSync} título(s) da sua biblioteca local foram salvos na nuvem.`
             });
-            // Clear local library after successful sync to avoid re-syncing
             setLocalLibrary([]);
             window.localStorage.removeItem(LOCAL_STORAGE_KEY);
-          } catch (error) {
-            console.error("Error syncing local library to cloud:", error);
+          }).catch((error) => {
+            const permissionError = new FirestorePermissionError({
+                path: `users/${user.uid}/library`,
+                operation: 'write',
+                requestResourceData: localLibrary,
+            });
+            errorEmitter.emit('permission-error', permissionError);
             toast({
               variant: "destructive",
               title: "Erro na Sincronização",
               description: "Não foi possível sincronizar sua biblioteca local com a nuvem."
             });
-          }
+          });
         }
       };
 
@@ -261,3 +269,5 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     </LibraryContext.Provider>
   );
 }
+
+    
