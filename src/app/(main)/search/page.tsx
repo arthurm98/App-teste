@@ -44,7 +44,11 @@ export default function SearchPage() {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
+        if (searchTerm.trim().length >= 3) {
+            setDebouncedSearchTerm(searchTerm);
+        } else {
+            setDebouncedSearchTerm("");
+        }
     }, 500); // 500ms debounce
 
     return () => {
@@ -90,7 +94,7 @@ export default function SearchPage() {
                 results = mangaData.data.map((manga: MangaDexManga) => {
                     const coverArt = manga.relationships.find(rel => rel.type === 'cover_art');
                     const coverFileName = coverArt?.attributes?.fileName;
-                    const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}.256.jpg` : "/placeholder.jpg";
+                    const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}.256.jpg` : "";
                     return adaptMangaDexToJikan(manga, coverUrl);
                 });
             }

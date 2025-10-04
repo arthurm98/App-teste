@@ -1,7 +1,6 @@
 {
   "name": "MangaTrack",
   "short_name": "MangaTrack",
-  "description": "Organize e acompanhe seus mangás, manhwas e webtoons.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

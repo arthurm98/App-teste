@@ -3,6 +3,8 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from "@/components/ui/toaster";
 import { LibraryProvider } from '@/context/library-provider';
+import { poppins, pt_sans } from './fonts';
+import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'MangaTrack',
@@ -18,13 +20,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
         <link rel="apple-touch-icon" href="/icon-192x192.png"></link>
         <meta name="theme-color" content="#4F46E5" />
       </head>
-      <body className="font-body antialiased">
+      <body className={cn("font-body antialiased", poppins.variable, pt_sans.variable)}>
         <ThemeProvider>
           <LibraryProvider>
             {children}

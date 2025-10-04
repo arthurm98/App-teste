@@ -29,17 +29,25 @@ export function OnlineMangaCard({ manga }: OnlineMangaCardProps) {
         addToLibrary(manga)
     }
   }
+  
+  const imageUrl = manga.images.webp.large_image_url || manga.images.webp.image_url;
 
   return (
     <Card className="group flex flex-col overflow-hidden">
       <CardHeader className="p-0 relative">
-        <Image
-          src={manga.images.webp.large_image_url || manga.images.webp.image_url || "/placeholder.jpg"}
-          alt={`Capa de ${manga.title}`}
-          width={400}
-          height={600}
-          className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
-        />
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={`Capa de ${manga.title}`}
+            width={400}
+            height={600}
+            className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="w-full h-[300px] bg-muted flex items-center justify-center">
+             <span className="text-xs text-muted-foreground">Imagem não disponível</span>
+          </div>
+        )}
         {manga.type && <Badge variant="secondary" className="absolute top-2 right-2">{manga.type}</Badge>}
       </CardHeader>
       <CardContent className="p-3 flex-grow flex flex-col">
