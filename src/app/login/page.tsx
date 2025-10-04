@@ -3,16 +3,17 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useFormState } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { Book } from 'lucide-react';
 
 const loginSchema = z.object({
@@ -20,7 +21,14 @@ const loginSchema = z.object({
   password: z.string().min(6, { message: 'A senha deve ter pelo menos 6 caracteres.' }),
 });
 
+const resetPasswordSchema = z.object({
+    resetEmail: z.string().email({ message: 'Por favor, insira um email válido para redefinir a senha.' }),
+});
+
+
 type LoginFormValues = z.infer<typeof loginSchema>;
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
+
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -28,6 +36,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const {
     register,
@@ -35,6 +44,15 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
+  });
+
+  const {
+    register: registerReset,
+    handleSubmit: handleSubmitReset,
+    formState: { errors: resetErrors },
+    reset,
+  } = useForm<ResetPasswordFormValues>({
+      resolver: zodResolver(resetPasswordSchema),
   });
 
   useEffect(() => {
@@ -85,7 +103,6 @@ export default function LoginPage() {
         title: 'Login bem-sucedido!',
         description: 'Redirecionando para sua biblioteca...',
       });
-      // O useEffect cuidará do redirecionamento
     } catch (error) {
       handleAuthError(error);
     } finally {
@@ -101,12 +118,29 @@ export default function LoginPage() {
         title: 'Conta criada com sucesso!',
         description: 'Você está logado. Redirecionando para sua biblioteca...',
       });
-      // O useEffect cuidará do redirecionamento
     } catch (error) {
       handleAuthError(error);
     } finally {
       setIsSubmitting(false);
     }
+  };
+  
+  const handlePasswordReset = async (data: ResetPasswordFormValues) => {
+      setIsResetting(true);
+      try {
+          await sendPasswordResetEmail(auth, data.resetEmail);
+          toast({
+              title: "E-mail de redefinição enviado",
+              description: `Se uma conta para ${data.resetEmail} existir, um e-mail foi enviado. Verifique sua caixa de entrada.`,
+          });
+          reset(); // Limpa o formulário do dialog
+          // A linha abaixo fecharia o Dialog, mas vamos deixar o usuário fechar manualmente
+          // document.getElementById('close-reset-dialog')?.click();
+      } catch (error) {
+          handleAuthError(error); // Reutilizamos nosso error handler
+      } finally {
+          setIsResetting(false);
+      }
   };
 
   if (isUserLoading || user) {
@@ -148,6 +182,7 @@ export default function LoginPage() {
               />
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
             </div>
+            
             <div className="flex flex-col gap-2 pt-2">
                <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? 'Entrando...' : 'Entrar'}
@@ -164,7 +199,46 @@ export default function LoginPage() {
             </div>
           </form>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex-col gap-4">
+           <Dialog>
+                <DialogTrigger asChild>
+                    <Button variant="link" className="p-0 h-auto text-xs text-muted-foreground">Esqueceu sua senha?</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Redefinir Senha</DialogTitle>
+                        <DialogDescription>
+                            Digite seu e-mail para receber um link de redefinição de senha. Verifique sua caixa de spam se não o encontrar.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmitReset(handlePasswordReset)}>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="resetEmail" className="text-right">
+                                    Email
+                                </Label>
+                                <Input
+                                    id="resetEmail"
+                                    type="email"
+                                    placeholder="seu@email.com"
+                                    className="col-span-3"
+                                    {...registerReset('resetEmail')}
+                                    disabled={isResetting}
+                                />
+                            </div>
+                             {resetErrors.resetEmail && <p className="col-start-2 col-span-3 text-xs text-destructive">{resetErrors.resetEmail.message}</p>}
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild id="close-reset-dialog">
+                                <Button type="button" variant="secondary">Cancelar</Button>
+                            </DialogClose>
+                            <Button type="submit" disabled={isResetting}>
+                                {isResetting ? 'Enviando...' : 'Enviar Link'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
             <p className="text-xs text-muted-foreground text-center w-full">Criado por ArthurM</p>
         </CardFooter>
       </Card>
