@@ -36,14 +36,25 @@ function adaptMangaDexToJikan(manga: MangaDexManga, coverUrl: string): JikanMang
 
 export default function SearchPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<JikanManga[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
   useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms debounce
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+
+  useEffect(() => {
     const fetchMangas = async () => {
-      if (searchTerm.trim().length < 3) {
+      if (debouncedSearchTerm.trim().length < 3) {
         setSearchResults([]);
         return;
       }
@@ -55,7 +66,7 @@ export default function SearchPage() {
       // 1. Tentar buscar na API Jikan
       try {
         const response = await fetch(
-          `https://api.jikan.moe/v4/manga?q=${encodeURIComponent(searchTerm.trim())}&sfw`
+          `https://api.jikan.moe/v4/manga?q=${encodeURIComponent(debouncedSearchTerm.trim())}&sfw`
         );
         if (response.ok) {
           const data = await response.json();
@@ -72,7 +83,7 @@ export default function SearchPage() {
       // 2. Se Jikan falhar ou não retornar resultados, tentar MangaDex (fallback)
       if (results.length === 0) {
         try {
-          const mangaResponse = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(searchTerm.trim())}&includes[]=cover_art`);
+          const mangaResponse = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art`);
           if (mangaResponse.ok) {
             const mangaData = await mangaResponse.json();
             if (mangaData.data && mangaData.data.length > 0) {
@@ -109,9 +120,8 @@ export default function SearchPage() {
       setIsSearching(false);
     };
 
-    const debounceTimeout = setTimeout(fetchMangas, 500); // 500ms debounce
-    return () => clearTimeout(debounceTimeout);
-  }, [searchTerm, toast]);
+    fetchMangas();
+  }, [debouncedSearchTerm, toast]);
 
   const isLoading = isSearching || isPending;
 
@@ -133,8 +143,8 @@ export default function SearchPage() {
 
       <div>
         <h2 className="text-2xl font-headline font-semibold mb-4">
-          {searchTerm.trim().length >= 3
-            ? `Resultados para "${searchTerm.trim()}"`
+          {debouncedSearchTerm.trim().length >= 3
+            ? `Resultados para "${debouncedSearchTerm.trim()}"`
             : "Digite ao menos 3 caracteres para buscar"}
         </h2>
         {isLoading ? (
@@ -155,7 +165,7 @@ export default function SearchPage() {
             ))}
           </div>
         ) : (
-          searchTerm.trim().length >= 3 && <p className="text-muted-foreground text-center py-8">Nenhum título encontrado.</p>
+          debouncedSearchTerm.trim().length >= 3 && <p className="text-muted-foreground text-center py-8">Nenhum título encontrado.</p>
         )}
       </div>
     </div>
