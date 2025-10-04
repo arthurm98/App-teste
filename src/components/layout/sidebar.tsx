@@ -27,10 +27,11 @@ const authMenuItem = { href: "/login", label: "Login", icon: LogIn };
 export function AppSidebar() {
   const pathname = usePathname();
   const { user, isUserLoading } = useUser();
-  const items = user ? menuItems : [...menuItems, authMenuItem];
+  // No desktop, mostramos todos os itens normais. O login é tratado no UserNav
+  const itemsToDisplay = user ? menuItems : [];
 
   return (
-    <Sidebar>
+    <Sidebar className="hidden md:flex md:flex-col">
       <SidebarHeader>
         <Link href="/" className="flex flex-col items-center gap-0">
             <h1 className="text-xl font-headline font-semibold text-primary">MangaTrack</h1>
@@ -39,7 +40,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {!isUserLoading && items.map((item) => (
+          {!isUserLoading && itemsToDisplay.map((item) => (
             <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
@@ -57,4 +58,36 @@ export function AppSidebar() {
       </SidebarContent>
     </Sidebar>
   );
+}
+
+
+export function BottomBar() {
+    const pathname = usePathname();
+    const { user } = useUser();
+
+    if (!user) {
+        return null;
+    }
+
+    return (
+        <div className="md:hidden fixed bottom-0 left-0 z-50 w-full h-16 bg-background border-t border-border">
+            <div className="grid h-full max-w-lg grid-cols-4 mx-auto font-medium">
+                {menuItems.map((item) => {
+                    const isActive = pathname === item.href;
+                    return (
+                        <Link key={item.href} href={item.href} className={cn(
+                            "inline-flex flex-col items-center justify-center px-5 hover:bg-muted group",
+                            isActive ? "text-primary" : "text-muted-foreground"
+                        )}>
+                            <item.icon className={cn(
+                                "w-5 h-5 mb-1",
+                                isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                            )} />
+                            <span className="text-xs">{item.label}</span>
+                        </Link>
+                    )
+                })}
+            </div>
+        </div>
+    )
 }

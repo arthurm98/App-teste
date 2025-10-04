@@ -24,10 +24,10 @@ export default function LibraryPage() {
             <TabsTrigger value="completed">Completo (0)</TabsTrigger>
           </TabsList>
            <TabsContent value="reading">
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                {Array.from({ length: 6 }).map((_, i) => (
                  <div key={i} className="flex flex-col gap-2">
-                   <Skeleton className="h-[300px] w-full" />
+                   <Skeleton className="h-[250px] sm:h-[300px] w-full" />
                    <Skeleton className="h-5 w-4/5 mt-2" />
                    <Skeleton className="h-10 w-full mt-2" />
                  </div>
@@ -51,7 +51,7 @@ export default function LibraryPage() {
         </TabsList>
         <TabsContent value="reading">
           {reading.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {reading.map((manga) => (
                 <MangaCard key={manga.id} manga={manga} />
               ))}
@@ -62,7 +62,7 @@ export default function LibraryPage() {
         </TabsContent>
         <TabsContent value="planToRead">
           {planToRead.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {planToRead.map((manga) => (
                 <MangaCard key={manga.id} manga={manga} />
               ))}
@@ -73,7 +73,7 @@ export default function LibraryPage() {
         </TabsContent>
         <TabsContent value="completed">
           {completed.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {completed.map((manga) => (
                 <MangaCard key={manga.id} manga={manga} />
               ))}
