@@ -1,4 +1,4 @@
-"use client";
+{"use client";
 
 import { useState, useEffect, useTransition } from "react";
 import { Input } from "@/components/ui/input";
@@ -81,7 +81,7 @@ export default function SearchPage() {
            console.warn("Jikan API request failed with status:", response.status);
         }
       } catch (error) {
-        console.error("Erro ao buscar na Jikan API:", error);
+        // Silenciosamente ignora o erro da Jikan para tentar o fallback
       }
 
       // 2. Se Jikan falhar ou não retornar resultados, tentar MangaDex (fallback)
@@ -103,7 +103,6 @@ export default function SearchPage() {
              errorOccurred = true;
           }
         } catch (error) {
-          console.error("Erro ao buscar na MangaDex API:", error);
           errorOccurred = true;
         }
       }
@@ -139,7 +138,7 @@ export default function SearchPage() {
         <Input
           type="search"
           placeholder="Buscar um mangá, manhwa ou webtoon..."
-          className="pl-10 text-base"
+          className="pl-10 text-sm"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
