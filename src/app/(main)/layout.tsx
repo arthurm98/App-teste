@@ -8,6 +8,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { Book } from 'lucide-react';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -40,6 +41,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
               {children}
           </main>
         </SidebarInset>
+        <FirebaseErrorListener />
       </SidebarProvider>
     );
   }
