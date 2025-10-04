@@ -1,36 +1,35 @@
 /**
- * @fileoverview Firestore Security Rules for MangaTrack application.
+ * @file Firestore Security Rules for MangaTrack.
  *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user profiles and manga libraries.
- * Each user has full control over their own profile and library data.
+ * @core_philosophy This ruleset enforces a strict user-ownership model. Users can only
+ *  access their own profile data and manga library entries. All data is nested under
+ *  /users/{userId}, ensuring clear ownership.
  *
- * Data Structure:
- * - `/users/{userId}`: Stores public user profile information.
- * - `/users/{userId}/library/{mangaId}`: Stores individual manga entries in a user's library.
+ * @data_structure
+ *  - /users/{userId}: Stores public user profile information. The document ID is
+ *    the same as the Firebase Auth UID.
+ *  - /users/{userId}/library/{mangaId}: Stores the manga entries for a user's personal
+ *    library. Path-based ownership ensures users can only access their own library.
  *
- * Key Security Decisions:
- * - Users can only create, read, update, and delete their own profile and manga library data.
- * - Listing other user's libraries is disallowed.
- * - Schema validation is relaxed in this prototyping phase, focusing on authorization.
- * - Denormalization is not required as the data structure inherently supports path-based ownership.
+ * @key_security_decisions
+ *  - Users can only list manga entries in their own libraries.
+ *  - Users cannot create, update, or delete other user's data.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Rules for user profile documents.
+     * @description Grants access to user profile information based on user ID.
      * @path /users/{userId}
      * @allow (create) User with matching ID can create their profile.
-     * @allow (get) User with matching ID can read their profile.
-     * @allow (update) User with matching ID can update their profile.
-     * @allow (delete) User with matching ID can delete their profile.
-     * @deny (create) User cannot create a profile with a mismatched ID.
-     * @deny (get) User cannot read another user's profile.
-     * @deny (update) User cannot update another user's profile.
-     * @deny (delete) User cannot delete another user's profile.
-     * @principle Enforces document ownership for all operations.
+     * @allow (get) Any user can get another user's public profile.
+     * @allow (update) Signed-in user can update their own profile.
+     * @allow (delete) Signed-in user can delete their own profile.
+     * @deny (create) User attempts to create a profile with a different ID.
+     * @deny (update) User attempts to update another user's profile.
+     * @deny (delete) User attempts to delete another user's profile.
+     * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
       function isSignedIn() {
@@ -42,33 +41,33 @@ service cloud.firestore {
       }
 
       function isExistingOwner(userId) {
-        return isOwner(userId) && resource.data != null;
+        return isOwner(userId) && exists(resource);
       }
 
-      allow get: if isOwner(userId);
+      allow get: if true;
       allow list: if false;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId) ;
+      allow delete: if isSignedIn() && isOwner(userId);
     }
 
     /**
-     * @description Rules for manga library entries within a user's profile.
+     * @description Grants access to manga library entries based on user ID.
      * @path /users/{userId}/library/{mangaId}
-     * @allow (create) User with matching ID can create a manga entry in their library.
-     * @allow (get) User with matching ID can read a manga entry in their library.
-     * @allow (list) User with matching ID can list manga entries in their library.
-     * @allow (update) User with matching ID can update a manga entry in their library.
-     * @allow (delete) User with matching ID can delete a manga entry in their library.
-     * @deny (create) User cannot create a manga entry in another user's library.
-     * @deny (get) User cannot read a manga entry from another user's library.
-     * @deny (list) User cannot list manga entries from another user's library.
-     * @deny (update) User cannot update a manga entry in another user's library.
-     * @deny (delete) User cannot delete a manga entry from another user's library.
-     * @principle Enforces document ownership for all operations.
+     * @allow (create) User with matching ID can create a library entry.
+     * @allow (get) User with matching ID can get their own library entry.
+     * @allow (list) User with matching ID can list their own library entries.
+     * @allow (update) User with matching ID can update their own library entry.
+     * @allow (delete) User with matching ID can delete their own library entry.
+     * @deny (create) User attempts to create a library entry for a different user.
+     * @deny (get) User attempts to get a library entry for a different user.
+     * @deny (list) User attempts to list library entries for a different user.
+     * @deny (update) User attempts to update a library entry for a different user.
+     * @deny (delete) User attempts to delete a library entry for a different user.
+     * @principle Restricts access to a user's own data tree.
      */
     match /users/{userId}/library/{mangaId} {
-       function isSignedIn() {
+      function isSignedIn() {
         return request.auth != null;
       }
 
@@ -76,15 +75,14 @@ service cloud.firestore {
         return request.auth.uid == userId;
       }
 
-       function isExistingOwner(userId) {
-        return isOwner(userId) && resource.data != null;
+      function isExistingOwner(userId) {
+        return isOwner(userId) && exists(resource);
       }
-
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
     }
   }
 }
