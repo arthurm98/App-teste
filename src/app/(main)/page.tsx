@@ -9,6 +9,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function LibraryPage() {
   const { library, isLoading } = useLibrary();
 
+  const reading = library.filter((m) => m.status === "Lendo");
+  const planToRead = library.filter((m) => m.status === "Planejo Ler");
+  const completed = library.filter((m) => m.status === "Completo");
+
   if (isLoading) {
     return (
       <div className="container mx-auto">
@@ -35,9 +39,6 @@ export default function LibraryPage() {
     );
   }
 
-  const reading = library.filter((m) => m.status === "Lendo");
-  const planToRead = library.filter((m) => m.status === "Planejo Ler");
-  const completed = library.filter((m) => m.status === "Completo");
 
   return (
     <div className="container mx-auto">
