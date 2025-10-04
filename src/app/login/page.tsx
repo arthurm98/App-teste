@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -164,6 +164,9 @@ export default function LoginPage() {
             </div>
           </form>
         </CardContent>
+        <CardFooter>
+            <p className="text-xs text-muted-foreground text-center w-full">Criado por ArthurM</p>
+        </CardFooter>
       </Card>
     </div>
   );
