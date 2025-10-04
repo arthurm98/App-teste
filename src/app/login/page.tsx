@@ -50,6 +50,7 @@ export default function LoginPage() {
     switch (error.code) {
       case 'auth/user-not-found':
       case 'auth/wrong-password':
+      case 'auth/invalid-credential':
         title = 'Credenciais Inválidas';
         description = 'O e-mail ou a senha estão incorretos. Verifique e tente novamente.';
         break;
@@ -148,7 +149,7 @@ export default function LoginPage() {
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
             </div>
             <div className="flex flex-col gap-2 pt-2">
-               <Button type="submit" className="w-full" disabled={isSubmitting}>
+               <Button type="submit" className="w-full" disabled={isSubsubmitting}>
                 {isSubmitting ? 'Entrando...' : 'Entrar'}
               </Button>
               <Button
