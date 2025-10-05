@@ -148,7 +148,7 @@ export default function LoginPage() {
       try {
           await signInAnonymously(auth);
           toast({
-              title: "Modo anônimo ativado",
+              title: "Modo offline ativado",
               description: "Sua biblioteca será salva neste dispositivo. Crie uma conta para sincronizar na nuvem.",
           });
           // O useEffect cuidará do redirecionamento
@@ -227,7 +227,7 @@ export default function LoginPage() {
                 disabled={isSubmitting}
               >
                 <UserIcon className="mr-2 h-4 w-4" />
-                {isSubmitting ? 'Aguarde...' : 'Continuar como Anônimo'}
+                {isSubmitting ? 'Aguarde...' : 'Continuar Offline'}
               </Button>
         </CardContent>
         <CardFooter className="flex-col gap-4">
@@ -277,3 +277,5 @@ export default function LoginPage() {
   );
 }
  
+
+    
