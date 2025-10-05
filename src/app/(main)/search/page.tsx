@@ -26,11 +26,11 @@ const CACHE_PREFIX = "mangatrack_search_";
 
 function normalizeMangaType(type: string | null): MangaType {
     const lowerType = type?.toLowerCase() || '';
+    if (lowerType.includes('manhwa') || lowerType.includes('manhua')) return 'Manhwa';
     if (lowerType.includes('manga')) return 'Mangá';
-    if (lowerType.includes('manhwa')) return 'Manhwa';
     if (lowerType.includes('webtoon')) return 'Webtoon';
     if (lowerType.includes('novel')) return 'Novel';
-    if (lowerType.includes('manhua') || lowerType.includes('oel') || lowerType.includes('doujinshi')) return 'Mangá';
+    if (lowerType.includes('oel') || lowerType.includes('doujinshi')) return 'Mangá';
     return 'Outro';
 }
 
