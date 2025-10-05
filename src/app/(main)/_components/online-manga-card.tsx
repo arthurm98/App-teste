@@ -53,7 +53,7 @@ export function OnlineMangaCard({ manga }: OnlineMangaCardProps) {
              <p className="text-center font-headline text-muted-foreground">{manga.title}</p>
           </div>
         )}
-        {manga.type && <Badge variant="secondary" className="absolute top-2 right-2">{manga.type}</Badge>}
+        {manga.type && <Badge variant="secondary" className="absolute top-2 left-2">{manga.type}</Badge>}
       </CardHeader>
       <CardContent className="p-3 flex-grow flex flex-col">
         <CardTitle className="font-headline text-base leading-tight truncate mb-2" title={manga.title}>
