@@ -161,7 +161,6 @@ export default function SearchPage() {
       
       setIsSearching(true);
       let results: JikanManga[] = [];
-      let finalError = false;
 
       // Funções de busca por API
       const searchJikan = async () => {
@@ -178,33 +177,30 @@ export default function SearchPage() {
 
       const searchMangaDex = async () => {
         try {
-            const response = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art&limit=20&order[relevance]=desc`);
-            if (!response.ok) return [];
-
-            const result = await response.json();
-            if (result.result !== 'ok' || !Array.isArray(result.data)) return [];
-
-            // 1. Criar um mapa de capas (cover_art)
-            const coverArtMap = new Map<string, string>();
-            result.data.forEach((item: any) => {
-                if (item.type === 'cover_art' && item.attributes?.fileName) {
-                    coverArtMap.set(item.id, item.attributes.fileName);
-                }
-            });
-            
-            // 2. Filtrar apenas os mangás e mapeá-los
-            const mangaList = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
-            
-            // 3. Adaptar os dados, encontrando a capa correta no mapa
-            return mangaList.map((manga: MangaDexManga) => {
-                const coverRel = manga.relationships.find((rel: Relationship) => rel.type === 'cover_art');
-                const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
-                const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : "";
-                return adaptMangaDexToJikan(manga, coverUrl);
-            });
-
+          const response = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art&limit=20&order[relevance]=desc`);
+          if (!response.ok) return [];
+      
+          const result = await response.json();
+          if (result.result !== 'ok' || !Array.isArray(result.data)) return [];
+      
+          const mangaList = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
+          const coverArtList = result.data.filter((item: any): item is Relationship => item.type === 'cover_art');
+      
+          const coverArtMap = new Map<string, string>();
+          coverArtList.forEach(cover => {
+            if (cover.id && cover.attributes?.fileName) {
+              coverArtMap.set(cover.id, cover.attributes.fileName);
+            }
+          });
+      
+          return mangaList.map((manga: MangaDexManga) => {
+            const coverRel = manga.relationships.find((rel: Relationship) => rel.type === 'cover_art');
+            const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
+            const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : "";
+            return adaptMangaDexToJikan(manga, coverUrl);
+          });
         } catch (error) {
-            console.warn("MangaDex API request failed:", error);
+          console.warn("MangaDex API request failed:", error);
         }
         return [];
       };
@@ -285,9 +281,13 @@ export default function SearchPage() {
       }
       
       if (results.length === 0) {
-        finalError = true;
-      }
-
+        toast({
+         variant: "destructive",
+         title: "Nenhum Resultado",
+         description:
+           "Nenhum título foi encontrado com esse termo. Tente outra API ou palavra-chave.",
+       });
+     }
 
       startTransition(() => {
         setSearchResults(results);
@@ -299,16 +299,6 @@ export default function SearchPage() {
           }
         }
       });
-
-      if (finalError && results.length === 0) {
-         toast({
-          variant: "destructive",
-          title: "Nenhum Resultado",
-          description:
-            "Nenhum título foi encontrado com esse termo. Tente outra API ou palavra-chave.",
-        });
-      }
-
       setIsSearching(false);
     };
 
@@ -380,3 +370,5 @@ export default function SearchPage() {
     </div>
   );
 }
+
+    
