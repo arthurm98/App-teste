@@ -13,7 +13,6 @@ type ApiKeys = {
   mangaDex: string;
   kitsu: string;
   mangaUpdates: string;
-  aniList: string;
 };
 
 export function ApiKeysSettings() {
@@ -22,7 +21,6 @@ export function ApiKeysSettings() {
     mangaDex: "",
     kitsu: "",
     mangaUpdates: "",
-    aniList: "",
   });
 
   useEffect(() => {
@@ -90,17 +88,6 @@ export function ApiKeysSettings() {
           type="password"
           placeholder="Chave da API do MangaUpdates"
           value={apiKeys.mangaUpdates}
-          onChange={handleInputChange}
-        />
-      </div>
-       <div className="space-y-2">
-        <Label htmlFor="aniList">AniList</Label>
-        <Input
-          id="aniList"
-          name="aniList"
-          type="password"
-          placeholder="Chave da API do AniList"
-          value={apiKeys.aniList}
           onChange={handleInputChange}
         />
       </div>
