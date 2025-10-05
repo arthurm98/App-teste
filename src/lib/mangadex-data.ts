@@ -1,11 +1,12 @@
 // A type definition based on the MangaDex API
 // https://api.mangadex.org/docs/swagger.html#/Manga/get-manga
 
-type Relationship = {
+export type Relationship = {
     id: string;
     type: 'author' | 'artist' | 'cover_art';
     attributes?: {
       fileName?: string;
+      [key: string]: any; // Allow other attributes
     };
 };
   

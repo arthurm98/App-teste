@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Search as SearchIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { JikanManga } from "@/lib/jikan-data";
-import type { MangaDexManga } from "@/lib/mangadex-data";
+import type { MangaDexManga, Relationship } from "@/lib/mangadex-data";
 import type { KitsuManga } from "@/lib/kitsu-data";
 import { OnlineMangaCard } from "../_components/online-manga-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -121,19 +121,21 @@ export default function SearchPage() {
 
       const searchMangaDex = async () => {
         try {
-          const mangaResponse = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art`);
-          if (mangaResponse.ok) {
-            const mangaData = await mangaResponse.json();
-            if (mangaData.data && mangaData.data.length > 0) {
-              return mangaData.data.map((manga: MangaDexManga) => {
-                const coverArt = manga.relationships.find(rel => rel.type === 'cover_art');
-                const coverFileName = coverArt?.attributes?.fileName;
-                const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}.256.jpg` : "";
-                return adaptMangaDexToJikan(manga, coverUrl);
-              });
+            const mangaResponse = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art`);
+            if (mangaResponse.ok) {
+                const mangaData = await mangaResponse.json();
+                if (mangaData.data && mangaData.data.length > 0) {
+                    return mangaData.data.map((manga: MangaDexManga) => {
+                        const coverArtRelationship = manga.relationships.find(rel => rel.type === 'cover_art');
+                        const coverFileName = (coverArtRelationship?.attributes as { fileName: string })?.fileName;
+                        const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}.256.jpg` : "";
+                        return adaptMangaDexToJikan(manga, coverUrl);
+                    });
+                }
             }
-          }
-        } catch (error) { console.warn("MangaDex API request failed:", error); }
+        } catch (error) {
+            console.warn("MangaDex API request failed:", error);
+        }
         return [];
       };
 
