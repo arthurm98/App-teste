@@ -49,11 +49,12 @@ export function SettingsContent() {
     };
 
     const handleRestoreClick = () => {
-        if (user) {
+        // Bloqueia apenas se for um usuário com conta (não anônimo)
+        if (user && !user.isAnonymous) {
             toast({
                 variant: "destructive",
                 title: "Função Indisponível",
-                description: "A restauração de backup não é suportada para contas logadas no momento.",
+                description: "A restauração de backup não é suportada para contas logadas na nuvem.",
             });
             return;
         }

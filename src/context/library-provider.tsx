@@ -52,7 +52,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   // Save local library to LocalStorage when it changes
   useEffect(() => {
-    if (isLocalLoaded && !user) {
+    if (isLocalLoaded && (!user || user.isAnonymous)) {
       try {
         window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localLibrary));
       } catch (error) {
@@ -64,7 +64,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   // Cloud library listener
   useEffect(() => {
     let unsubscribe: Unsubscribe | undefined;
-    if (user && firestore) {
+    if (user && !user.isAnonymous && firestore) {
       setIsCloudLoading(true);
       const libCollection = collection(firestore, 'users', user.uid, 'library');
       unsubscribe = onSnapshot(libCollection, snapshot => {
@@ -86,6 +86,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       });
     } else {
       setCloudLibrary([]);
+      // Para usuários anônimos ou deslogados, o carregamento da nuvem não se aplica.
       setIsCloudLoading(false);
     }
     return () => unsubscribe?.();
@@ -93,51 +94,69 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   // Sync local to cloud on login
   useEffect(() => {
-    if (user && firestore && isLocalLoaded && !isCloudLoading && localLibrary.length > 0) {
-      const syncLocalToCloud = () => {
-        const batch = writeBatch(firestore);
-        let itemsToSync = 0;
-        
-        localLibrary.forEach(localManga => {
-          const cloudManga = cloudLibrary.find(m => m.id === localManga.id);
-          if (!cloudManga) {
-            const docRef = doc(firestore, 'users', user.uid, 'library', localManga.id);
-            const mangaData = { ...localManga, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
-            batch.set(docRef, mangaData);
-            itemsToSync++;
-          }
-        });
-        
-        if (itemsToSync > 0) {
-           batch.commit().then(() => {
-            toast({
-              title: "Sincronização Concluída",
-              description: `${itemsToSync} título(s) da sua biblioteca local foram salvos na nuvem.`
+    if (user && !user.isAnonymous && firestore && isLocalLoaded && localLibrary.length > 0) {
+      // Pequeno delay para garantir que o listener da nuvem tenha tempo de carregar os dados iniciais
+      const timer = setTimeout(() => {
+        const syncLocalToCloud = () => {
+          const batch = writeBatch(firestore);
+          let itemsToSync = 0;
+          
+          localLibrary.forEach(localManga => {
+            // Re-checa a cloudLibrary atualizada antes de sincronizar
+            const cloudManga = cloudLibrary.find(m => m.id === localManga.id);
+            if (!cloudManga) {
+              const docRef = doc(firestore, 'users', user.uid, 'library', localManga.id);
+              const mangaData = { ...localManga, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
+              batch.set(docRef, mangaData);
+              itemsToSync++;
+            }
+          });
+          
+          if (itemsToSync > 0) {
+             batch.commit().then(() => {
+              toast({
+                title: "Sincronização Concluída",
+                description: `${itemsToSync} título(s) da sua biblioteca local foram salvos na nuvem.`
+              });
+              // Limpa a biblioteca local após a sincronização bem-sucedida
+              setLocalLibrary([]);
+              window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+            }).catch((error) => {
+              const permissionError = new FirestorePermissionError({
+                  path: `users/${user.uid}/library`,
+                  operation: 'write',
+                  requestResourceData: localLibrary,
+              });
+              errorEmitter.emit('permission-error', permissionError);
+              toast({
+                variant: "destructive",
+                title: "Erro na Sincronização",
+                description: "Não foi possível sincronizar sua biblioteca local com a nuvem."
+              });
             });
+          } else if (localLibrary.length > 0) {
+            // Se não há nada a sincronizar, apenas limpa o local storage
             setLocalLibrary([]);
             window.localStorage.removeItem(LOCAL_STORAGE_KEY);
-          }).catch((error) => {
-            const permissionError = new FirestorePermissionError({
-                path: `users/${user.uid}/library`,
-                operation: 'write',
-                requestResourceData: localLibrary,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            toast({
-              variant: "destructive",
-              title: "Erro na Sincronização",
-              description: "Não foi possível sincronizar sua biblioteca local com a nuvem."
-            });
-          });
-        }
-      };
+          }
+        };
 
-      syncLocalToCloud();
+        syncLocalToCloud();
+
+      }, 1000); // Delay de 1 segundo
+
+      return () => clearTimeout(timer);
     }
-  }, [user, firestore, isLocalLoaded, isCloudLoading, localLibrary, cloudLibrary, toast]);
+  }, [user, firestore, isLocalLoaded, localLibrary, cloudLibrary, toast]);
 
-  const library = useMemo(() => (user ? cloudLibrary : localLibrary), [user, cloudLibrary, localLibrary]);
-  const isLoading = useMemo(() => (user ? isCloudLoading : !isLocalLoaded), [user, isCloudLoading, isLocalLoaded]);
+  const library = useMemo(() => (!user || user.isAnonymous ? localLibrary : cloudLibrary), [user, cloudLibrary, localLibrary]);
+  const isLoading = useMemo(() => {
+    if (!user || user.isAnonymous) {
+      return !isLocalLoaded;
+    }
+    return isCloudLoading;
+  }, [user, isCloudLoading, isLocalLoaded]);
+
 
   const isMangaInLibrary = useCallback((mangaId: number, title?: string) => {
     const checkId = mangaId > 0 ? String(mangaId) : generateMangaDexId(title || '');
@@ -163,7 +182,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       genres: manga.genres.map(g => g.name),
     };
 
-    if (user && firestore) {
+    if (user && !user.isAnonymous && firestore) {
       const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
       const dataToSave = { ...newManga, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
       setDocumentNonBlocking(docRef, dataToSave, { merge: true });
@@ -175,7 +194,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   const removeFromLibrary = useCallback((mangaId: string) => {
     const manga = library.find(m => m.id === mangaId);
-    if (user && firestore) {
+    if (user && !user.isAnonymous && firestore) {
       deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'library', mangaId));
     } else {
       setLocalLibrary(prev => prev.filter(m => m.id !== mangaId));
@@ -185,10 +204,10 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
   }, [library, toast, user, firestore]);
 
-  const updateLibraryItem = (mangaId: string, updates: Partial<Manga> & { updatedAt: Timestamp }) => {
-    if (user && firestore) {
+  const updateLibraryItem = (mangaId: string, updates: Partial<Manga> & { updatedAt?: Timestamp }) => {
+     if (user && !user.isAnonymous && firestore) {
       const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
-      updateDocumentNonBlocking(docRef, updates);
+      updateDocumentNonBlocking(docRef, { ...updates, updatedAt: Timestamp.now() });
     } else {
       setLocalLibrary(prev => prev.map(m => m.id === mangaId ? { ...m, ...updates } : m));
     }
@@ -210,7 +229,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       updates.status = 'Planejo Ler';
     }
     
-    updateLibraryItem(mangaId, { ...updates, updatedAt: Timestamp.now() });
+    updateLibraryItem(mangaId, updates);
 
     if (shouldShowCompletedToast) {
       toast({ title: "Título Concluído!", description: `Você terminou de ler ${manga.title}.` });
@@ -228,7 +247,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       updates.readChapters = 0;
     }
 
-    updateLibraryItem(mangaId, { ...updates, updatedAt: Timestamp.now() });
+    updateLibraryItem(mangaId, updates);
     toast({ title: "Status Atualizado", description: `O status de "${manga.title}" foi alterado para ${newStatus}.` });
   }, [library, toast]);
   
@@ -245,24 +264,23 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         updates.status = 'Completo';
      }
 
-     updateLibraryItem(mangaId, {...updates, updatedAt: Timestamp.now() });
+     updateLibraryItem(mangaId, updates);
      toast({ title: "Detalhes Atualizados", description: `As informações de "${manga.title}" foram salvas.` });
   }, [library, toast]);
 
   const restoreLibrary = useCallback((newLibrary: Manga[]) => {
-    if (user && firestore) {
-      // For cloud, this would be a more complex batch write operation.
-      // For now, we inform the user.
+    // Permite a restauração se não houver usuário ou se o usuário for anônimo
+    if (!user || user.isAnonymous) {
+       setLocalLibrary(newLibrary);
+       toast({ title: "Restauração Concluída", description: "Sua biblioteca local foi restaurada." });
+    } else {
        toast({
         variant: "destructive",
         title: "Função indisponível",
-        description: "A restauração de backup não é suportada para contas logadas no momento.",
+        description: "A restauração de backup não é suportada para contas logadas na nuvem.",
       });
-    } else {
-      setLocalLibrary(newLibrary);
-      toast({ title: "Restauração Concluída", description: "Sua biblioteca local foi restaurada." });
     }
-  }, [user, firestore, toast]);
+  }, [user, toast]);
 
   return (
     <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails, isLoading }}>
