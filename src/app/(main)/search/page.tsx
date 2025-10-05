@@ -125,34 +125,17 @@ export default function SearchPage() {
             if (mangaResponse.ok) {
                 const mangaData = await mangaResponse.json();
                 if (mangaData.data && mangaData.data.length > 0) {
-                    // A resposta da MangaDex para relacionamentos é complexa.
-                    // Os dados da capa não vêm aninhados diretamente.
-                    const allCoverArts = mangaData.data.flatMap((m: MangaDexManga) => 
-                        m.relationships.filter(r => r.type === 'cover_art')
-                    );
+                    
+                    const coverArtMap = new Map<string, string>();
+                    mangaData.data.forEach((item: MangaDexManga) => {
+                        const coverRel = item.relationships.find(r => r.type === 'cover_art' && r.attributes?.fileName);
+                        if(coverRel && coverRel.attributes?.fileName) {
+                            coverArtMap.set(item.id, `https://uploads.mangadex.org/covers/${item.id}/${coverRel.attributes.fileName}.256.jpg`);
+                        }
+                    });
 
                     return mangaData.data.map((manga: MangaDexManga) => {
-                        // 1. Encontrar o ID do relacionamento da capa para este mangá específico.
-                        const coverArtRelationship = manga.relationships.find(rel => rel.type === 'cover_art');
-                        let coverUrl = "";
-                        
-                        if (coverArtRelationship) {
-                            // 2. Usar esse ID para encontrar o objeto de capa completo na lista `allCoverArts`.
-                            // A API moderna do MangaDex pode não retornar o `fileName` diretamente.
-                            // Em vez disso, o `fileName` está nos `attributes` do objeto de relacionamento quando incluído.
-                            const coverArtObject = manga.relationships.find(
-                                (rel): rel is Relationship & { attributes: { fileName: string } } =>
-                                    rel.id === coverArtRelationship.id &&
-                                    rel.type === 'cover_art' &&
-                                    rel.attributes && 'fileName' in rel.attributes
-                            );
-
-                            if (coverArtObject) {
-                                // 3. Construir a URL.
-                                coverUrl = `https://uploads.mangadex.org/covers/${manga.id}/${coverArtObject.attributes.fileName}.256.jpg`;
-                            }
-                        }
-                        
+                        const coverUrl = coverArtMap.get(manga.id) || "";
                         return adaptMangaDexToJikan(manga, coverUrl);
                     });
                 }
