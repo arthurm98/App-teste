@@ -17,8 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MangaUpdatesManga } from "@/lib/mangaupdates-data";
 
-type ApiSource = "Auto" | "Jikan" | "MangaDex" | "Kitsu";
+type ApiSource = "Auto" | "Jikan" | "MangaDex" | "Kitsu" | "MangaUpdates";
 
 const CACHE_PREFIX = "mangatrack_search_";
 
@@ -78,6 +79,26 @@ function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
     synopsis: manga.attributes.synopsis,
     genres: [], // A API de busca da Kitsu não inclui gêneros
   };
+}
+
+// Função para adaptar os dados da MangaUpdates para o formato JikanManga
+function adaptMangaUpdatesToJikan(manga: MangaUpdatesManga): JikanManga {
+    const imageUrl = manga.image?.url?.original || "";
+    return {
+        mal_id: 0, // MangaUpdates não fornece mal_id
+        url: `https://www.mangaupdates.com/series.html?id=${manga.series_id}`,
+        images: {
+            jpg: { image_url: imageUrl, small_image_url: imageUrl, large_image_url: imageUrl },
+            webp: { image_url: imageUrl, small_image_url: imageUrl, large_image_url: imageUrl },
+        },
+        title: manga.title,
+        type: manga.type,
+        chapters: manga.latest_chapter,
+        status: 'ongoing', // A API de busca não informa o status
+        score: manga.bayesian_rating,
+        synopsis: manga.description,
+        genres: manga.genres?.map(g => ({ mal_id: g.genre_id, type: 'manga', name: g.genre, url: '' })) || [],
+    };
 }
 
 
@@ -144,37 +165,38 @@ export default function SearchPage() {
 
       const searchMangaDex = async () => {
         try {
-            const response = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art&limit=20`);
-            const result = await response.json();
-
-            if (result.result !== 'ok' || !Array.isArray(result.data)) {
-                console.warn("MangaDex API returned non-ok result or invalid data format.");
-                return [];
+          const response = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art&limit=20&order[relevance]=desc`);
+          if (!response.ok) {
+            console.warn("MangaDex API response not ok.", response.status);
+            return [];
+          }
+          const result = await response.json();
+      
+          if (result.result !== 'ok' || !Array.isArray(result.data)) {
+            console.warn("MangaDex API returned non-ok result or invalid data format.");
+            return [];
+          }
+      
+          const coverArtMap = new Map<string, string>();
+          result.data.forEach((item: any) => {
+            if (item.type === 'cover_art') {
+              coverArtMap.set(item.id, item.attributes.fileName);
             }
-            
-            const coverArtMap = new Map<string, string>();
-            result.data.forEach((item: any) => {
-                if (item.type === 'cover_art') {
-                    coverArtMap.set(item.id, item.attributes.fileName);
-                }
-            });
-
-            const mangaList = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
-
-            return mangaList.map((manga: MangaDexManga) => {
-                const coverRel = manga.relationships.find(rel => rel.type === 'cover_art');
-                const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
-                const coverUrl = coverFileName
-                    ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}`
-                    : "https://mangadex.org/img/avatar.png"; 
-                return adaptMangaDexToJikan(manga, coverUrl);
-            });
-
+          });
+          
+          const mangaList = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
+      
+          return mangaList.map((manga) => {
+            const coverRel = manga.relationships.find((rel: Relationship) => rel.type === 'cover_art');
+            const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
+            const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : "";
+            return adaptMangaDexToJikan(manga, coverUrl);
+          });
         } catch (error) {
-            console.warn("MangaDex API request failed:", error);
+          console.warn("MangaDex API request failed:", error);
         }
         return [];
-    };
+      };
 
       const searchKitsu = async () => {
         try {
@@ -188,6 +210,28 @@ export default function SearchPage() {
         } catch (error) { console.warn("Kitsu API request failed:", error); }
         return [];
       };
+      
+      const searchMangaUpdates = async () => {
+          try {
+              const response = await fetch(`https://api.mangaupdates.com/v1/series/search`, {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                      search: debouncedSearchTerm.trim(),
+                      perpage: 20,
+                  }),
+              });
+              if (response.ok) {
+                  const data = await response.json();
+                  if (data.results && data.results.length > 0) {
+                      return data.results.map((r: any) => adaptMangaUpdatesToJikan(r.record));
+                  }
+              }
+          } catch (error) { console.warn("MangaUpdates API request failed:", error); }
+          return [];
+      };
 
       // Lógica de busca baseada na fonte da API
       if (apiSource === "Jikan") {
@@ -196,6 +240,8 @@ export default function SearchPage() {
         results = await searchMangaDex();
       } else if (apiSource === "Kitsu") {
         results = await searchKitsu();
+      } else if (apiSource === "MangaUpdates") {
+        results = await searchMangaUpdates();
       } else { // Auto
         results = await searchJikan();
         if (results.length === 0) {
@@ -203,6 +249,9 @@ export default function SearchPage() {
         }
         if (results.length === 0) {
           results = await searchKitsu();
+        }
+        if (results.length === 0) {
+            results = await searchMangaUpdates();
         }
       }
       
@@ -265,6 +314,7 @@ export default function SearchPage() {
               <SelectItem value="Jikan">Jikan (MAL)</SelectItem>
               <SelectItem value="MangaDex">MangaDex</SelectItem>
               <SelectItem value="Kitsu">Kitsu</SelectItem>
+              <SelectItem value="MangaUpdates">MangaUpdates</SelectItem>
             </SelectContent>
           </Select>
         </div>
