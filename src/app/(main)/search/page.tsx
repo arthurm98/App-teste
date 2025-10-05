@@ -171,10 +171,12 @@ export default function SearchPage() {
           const result = await response.json();
           if (result.result !== 'ok' || !Array.isArray(result.data)) return [];
           
-          const coverArtList = result.data.filter((item: any) => item.type === 'cover_art');
-          const coverArtMap = new Map<string, string>(
-            coverArtList.map((cover: any) => [cover.id, cover.attributes.fileName])
-          );
+          const coverArtMap = new Map<string, string>();
+            result.data.forEach((item: any) => {
+                if (item.type === 'cover_art' && item.attributes) {
+                    coverArtMap.set(item.id, item.attributes.fileName);
+                }
+            });
 
           const mangaList: MangaDexManga[] = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
 
@@ -209,6 +211,7 @@ export default function SearchPage() {
                   method: 'POST',
                   headers: {
                       'Content-Type': 'application/json',
+                      'User-Agent': 'MangaTrack/1.0',
                   },
                   body: JSON.stringify({
                       search: debouncedSearchTerm.trim(),
@@ -343,5 +346,3 @@ export default function SearchPage() {
     </div>
   );
 }
-
-    
