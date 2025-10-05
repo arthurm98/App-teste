@@ -22,19 +22,25 @@ type ApiSource = "Auto" | "Jikan" | "MangaDex" | "Kitsu";
 
 // Função para adaptar os dados da MangaDex para o formato JikanManga
 function adaptMangaDexToJikan(manga: MangaDexManga, coverUrl: string): JikanManga {
+  const titleObj = manga.attributes.title;
+  const mainTitle = titleObj.en || Object.values(titleObj).find(t => !!t) || "Untitled";
+
+  const descriptionObj = manga.attributes.description;
+  const synopsis = descriptionObj.en || Object.values(descriptionObj).find(d => !!d) || null;
+
   return {
-    mal_id: 0, // MangaDex não fornece mal_id diretamente, então usamos um valor placeholder
+    mal_id: 0, // MangaDex não fornece mal_id diretamente
     url: `https://mangadex.org/title/${manga.id}`,
     images: {
       jpg: { image_url: coverUrl, small_image_url: coverUrl, large_image_url: coverUrl },
       webp: { image_url: coverUrl, small_image_url: coverUrl, large_image_url: coverUrl },
     },
-    title: manga.attributes.title.en || Object.values(manga.attributes.title)[0] || "Untitled",
+    title: mainTitle,
     type: manga.attributes.publicationDemographic || manga.type,
     chapters: manga.attributes.lastChapter ? parseFloat(manga.attributes.lastChapter) : null,
     status: manga.attributes.status,
     score: null, // MangaDex API não fornece score diretamente na busca
-    synopsis: manga.attributes.description.en || Object.values(manga.attributes.description)[0] || null,
+    synopsis: synopsis,
     genres: manga.attributes.tags.filter(tag => tag.attributes.group === 'genre').map(tag => ({
       mal_id: 0,
       type: "manga",
@@ -120,30 +126,40 @@ export default function SearchPage() {
       };
 
       const searchMangaDex = async () => {
-        try {
-            const mangaResponse = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art`);
-            if (mangaResponse.ok) {
-                const mangaData = await mangaResponse.json();
-                if (mangaData.data && mangaData.data.length > 0) {
-                    
-                    const coverArtMap = new Map<string, string>();
-                    mangaData.data.forEach((item: MangaDexManga) => {
-                        const coverRel = item.relationships.find(r => r.type === 'cover_art' && r.attributes?.fileName);
-                        if(coverRel && coverRel.attributes?.fileName) {
-                            coverArtMap.set(item.id, `https://uploads.mangadex.org/covers/${item.id}/${coverRel.attributes.fileName}.256.jpg`);
-                        }
-                    });
-
-                    return mangaData.data.map((manga: MangaDexManga) => {
-                        const coverUrl = coverArtMap.get(manga.id) || "";
-                        return adaptMangaDexToJikan(manga, coverUrl);
-                    });
-                }
-            }
-        } catch (error) {
-            console.warn("MangaDex API request failed:", error);
-        }
-        return [];
+          try {
+              const mangaResponse = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art`);
+              if (mangaResponse.ok) {
+                  const mangaData = await mangaResponse.json();
+                  if (mangaData.data && mangaData.data.length > 0) {
+                      // 1. Create a map of all cover art objects from the response relationships.
+                      const coverArtMap = new Map<string, string>();
+                      if (mangaData.data) {
+                          for (const item of mangaData.data) {
+                              if (item.relationships) {
+                                  for (const rel of item.relationships) {
+                                      if (rel.type === 'cover_art' && rel.attributes?.fileName) {
+                                          // The key is the manga ID, the value is the filename.
+                                          coverArtMap.set(item.id, rel.attributes.fileName);
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                      
+                      // 2. Map manga data and find the corresponding cover.
+                      return mangaData.data.map((manga: MangaDexManga) => {
+                          const coverFileName = coverArtMap.get(manga.id);
+                          const coverUrl = coverFileName 
+                              ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}.256.jpg`
+                              : "";
+                          return adaptMangaDexToJikan(manga, coverUrl);
+                      });
+                  }
+              }
+          } catch (error) {
+              console.warn("MangaDex API request failed:", error);
+          }
+          return [];
       };
 
       const searchKitsu = async () => {
@@ -264,3 +280,5 @@ export default function SearchPage() {
     </div>
   );
 }
+
+    
