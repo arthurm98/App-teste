@@ -3,7 +3,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsContent } from "../_components/settings-content";
-import { ApiKeysSettings } from "../_components/api-keys-settings";
 
 export default function SettingsPage() {
     return (
@@ -19,18 +18,6 @@ export default function SettingsPage() {
                     </CardHeader>
                     <CardContent>
                         <SettingsContent />
-                    </CardContent>
-                </Card>
-
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="font-headline">Chaves de API</CardTitle>
-                        <CardDescription>
-                            Adicione suas chaves de API para os serviços de busca. As chaves são salvas localmente no seu navegador e não são enviadas para a nuvem.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <ApiKeysSettings />
                     </CardContent>
                 </Card>
             </div>
