@@ -139,15 +139,19 @@ export default function SearchPage() {
                 return [];
             }
 
-            const coverArtMap = new Map<string, string>();
-            result.data.forEach((entity: any) => {
-                if (entity.type === 'cover_art' && entity.id && entity.attributes?.fileName) {
-                    coverArtMap.set(entity.id, entity.attributes.fileName);
-                }
-            });
-
-            const mangaList = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
+            const mangaData = result.data as (MangaDexManga | { type: 'cover_art', id: string, attributes: { fileName: string } })[];
             
+            // 1. Create a map of cover art IDs to their file names
+            const coverArtMap = new Map<string, string>();
+            mangaData
+              .filter((item): item is { type: 'cover_art', id: string, attributes: { fileName: string } } => item.type === 'cover_art')
+              .forEach(coverArt => {
+                coverArtMap.set(coverArt.id, coverArt.attributes.fileName);
+              });
+            
+            // 2. Filter for manga entities and adapt them
+            const mangaList = mangaData.filter((item): item is MangaDexManga => item.type === 'manga');
+
             return mangaList.map((manga: MangaDexManga) => {
                 const coverRel = manga.relationships.find(rel => rel.type === 'cover_art');
                 const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
@@ -271,7 +275,7 @@ export default function SearchPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
             {searchResults.map((manga, index) => (
               // Usamos uma combinação do ID (se existir) e o índice como chave para evitar colisões
-              <OnlineMangaCard key={`${manga.mal_id || 'md'}-${index}`} manga={manga} />
+              <OnlineMangaCard key={`${manga.mal_id || manga.title}-${index}`} manga={manga} />
             ))}
           </div>
         ) : (
@@ -281,7 +285,3 @@ export default function SearchPage() {
     </div>
   );
 }
-
-    
-
-    
