@@ -26,6 +26,7 @@ interface MangaCardProps {
 export function MangaCard({ manga }: MangaCardProps) {
   const { updateChapter, removeFromLibrary, updateStatus } = useLibrary();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isImageError, setIsImageError] = useState(false);
 
   const imageUrl = manga.imageUrl || "https://picsum.photos/seed/placeholder/400/600";
   const progress = manga.totalChapters > 0 ? (manga.readChapters / manga.totalChapters) * 100 : 0;
@@ -43,14 +44,22 @@ export function MangaCard({ manga }: MangaCardProps) {
     <>
       <Card className="group flex flex-col overflow-hidden">
         <CardHeader className="p-0 relative">
-          <Image
-            src={imageUrl}
-            alt={`Capa de ${manga.title}`}
-            width={400}
-            height={600}
-            className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
-            data-ai-hint={'manga cover'}
-          />
+          {isImageError ? (
+             <div className="aspect-[2/3] w-full bg-muted flex items-center justify-center p-4">
+                <p className="text-center font-headline text-muted-foreground">{manga.title}</p>
+             </div>
+          ) : (
+            <Image
+              src={imageUrl}
+              alt={`Capa de ${manga.title}`}
+              width={400}
+              height={600}
+              className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
+              data-ai-hint={'manga cover'}
+              onError={() => setIsImageError(true)}
+              priority={false} // Imagens da biblioteca não são prioridade
+            />
+          )}
           <Badge variant="secondary" className="absolute top-2 left-2">{manga.type}</Badge>
           <div className="absolute top-1 right-1">
               <DropdownMenu>
