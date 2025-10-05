@@ -166,27 +166,19 @@ export default function SearchPage() {
       const searchMangaDex = async () => {
         try {
           const response = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art&limit=20&order[relevance]=desc`);
-          if (!response.ok) {
-            console.warn("MangaDex API response not ok.", response.status);
-            return [];
-          }
+          if (!response.ok) return [];
+
           const result = await response.json();
-      
-          if (result.result !== 'ok' || !Array.isArray(result.data)) {
-            console.warn("MangaDex API returned non-ok result or invalid data format.");
-            return [];
-          }
-      
-          const coverArtMap = new Map<string, string>();
-          result.data.forEach((item: any) => {
-            if (item.type === 'cover_art') {
-              coverArtMap.set(item.id, item.attributes.fileName);
-            }
-          });
+          if (result.result !== 'ok' || !Array.isArray(result.data)) return [];
           
-          const mangaList = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
-      
-          return mangaList.map((manga) => {
+          const coverArtList = result.data.filter((item: any) => item.type === 'cover_art');
+          const coverArtMap = new Map<string, string>(
+            coverArtList.map((cover: any) => [cover.id, cover.attributes.fileName])
+          );
+
+          const mangaList: MangaDexManga[] = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
+
+          return mangaList.map((manga: MangaDexManga) => {
             const coverRel = manga.relationships.find((rel: Relationship) => rel.type === 'cover_art');
             const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
             const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : "";
@@ -351,3 +343,5 @@ export default function SearchPage() {
     </div>
   );
 }
+
+    
