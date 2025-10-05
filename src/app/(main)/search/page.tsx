@@ -183,23 +183,26 @@ export default function SearchPage() {
 
             const result = await response.json();
             if (result.result !== 'ok' || !Array.isArray(result.data)) return [];
-            
+
+            // 1. Criar um mapa de capas (cover_art)
             const coverArtMap = new Map<string, string>();
             result.data.forEach((item: any) => {
                 if (item.type === 'cover_art' && item.attributes?.fileName) {
-                    // O ID da capa é o ID do próprio objeto de capa
                     coverArtMap.set(item.id, item.attributes.fileName);
                 }
             });
-
-            const mangaList: MangaDexManga[] = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
-
+            
+            // 2. Filtrar apenas os mangás e mapeá-los
+            const mangaList = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
+            
+            // 3. Adaptar os dados, encontrando a capa correta no mapa
             return mangaList.map((manga: MangaDexManga) => {
                 const coverRel = manga.relationships.find((rel: Relationship) => rel.type === 'cover_art');
                 const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
                 const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : "";
                 return adaptMangaDexToJikan(manga, coverUrl);
             });
+
         } catch (error) {
             console.warn("MangaDex API request failed:", error);
         }
