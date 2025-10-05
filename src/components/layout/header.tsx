@@ -8,7 +8,7 @@ import { useAuth, useUser } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { LogOut, User as UserIcon, Loader2 } from 'lucide-react';
+import { LogOut, User as UserIcon, Loader2, LogIn } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 
 function UserNav() {
@@ -18,7 +18,9 @@ function UserNav() {
 
   const handleLogout = async () => {
     await signOut(auth);
-    router.push('/login');
+    // Após o logout, o usuário permanece no app, mas em modo local.
+    // A página não precisa ser recarregada, o useUser cuidará da atualização do estado.
+    router.push('/'); 
   };
 
   if (isUserLoading) {
@@ -28,7 +30,8 @@ function UserNav() {
   if (!user) {
     return (
        <Button variant="ghost" onClick={() => router.push('/login')}>
-        Login
+         <LogIn className="mr-2 h-4 w-4" />
+         Login
       </Button>
     )
   }
@@ -68,7 +71,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6 lg:justify-end">
         <div className="md:hidden">
-            {/* O SidebarTrigger pode ser removido ou usado para outra finalidade se a BottomBar for a nav principal no mobile */}
+            <SidebarTrigger />
         </div>
         <div className="flex items-center gap-4">
             <ThemeToggle />

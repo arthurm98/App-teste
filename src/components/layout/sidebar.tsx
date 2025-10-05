@@ -22,13 +22,8 @@ const menuItems = [
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
 
-const authMenuItem = { href: "/login", label: "Login", icon: LogIn };
-
 export function AppSidebar() {
   const pathname = usePathname();
-  const { user, isUserLoading } = useUser();
-  // No desktop, mostramos todos os itens normais. O login é tratado no UserNav
-  const itemsToDisplay = user ? menuItems : [];
 
   return (
     <Sidebar className="hidden md:flex md:flex-col">
@@ -40,7 +35,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {!isUserLoading && itemsToDisplay.map((item) => (
+          {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
@@ -63,11 +58,6 @@ export function AppSidebar() {
 
 export function BottomBar() {
     const pathname = usePathname();
-    const { user } = useUser();
-
-    if (!user) {
-        return null;
-    }
 
     return (
         <div className="md:hidden fixed bottom-0 left-0 z-50 w-full h-16 bg-background border-t border-border">
