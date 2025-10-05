@@ -22,7 +22,11 @@ function UserNav() {
     router.push('/login'); 
   };
 
-  const handleLoginRedirect = () => {
+  const handleLoginRedirect = async () => {
+    // Se for um usuário anônimo, faz logout primeiro para permitir o "upgrade" da conta.
+    if (user && user.isAnonymous) {
+      await signOut(auth);
+    }
     router.push('/login');
   }
 
