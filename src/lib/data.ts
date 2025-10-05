@@ -1,6 +1,6 @@
 
 export type MangaStatus = "Lendo" | "Planejo Ler" | "Completo";
-export type MangaType = "Mangá" | "Manhwa" | "Webtoon";
+export type MangaType = "Mangá" | "Manhwa" | "Webtoon" | "Novel" | "Outro";
 
 export type Manga = {
   id: string;

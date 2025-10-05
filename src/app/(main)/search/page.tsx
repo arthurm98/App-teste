@@ -18,10 +18,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MangaUpdatesManga } from "@/lib/mangaupdates-data";
+import { MangaType } from "@/lib/data";
 
 type ApiSource = "Auto" | "Jikan" | "MangaDex" | "Kitsu" | "MangaUpdates";
 
 const CACHE_PREFIX = "mangatrack_search_";
+
+function normalizeMangaType(type: string | null): MangaType {
+    const lowerType = type?.toLowerCase() || '';
+    if (lowerType.includes('manga')) return 'Mangá';
+    if (lowerType.includes('manhwa')) return 'Manhwa';
+    if (lowerType.includes('webtoon')) return 'Webtoon';
+    if (lowerType.includes('novel')) return 'Novel';
+    if (lowerType.includes('manhua') || lowerType.includes('oel') || lowerType.includes('doujinshi')) return 'Mangá';
+    return 'Outro';
+}
+
 
 // Função para adaptar os dados da MangaDex para o formato JikanManga
 function adaptMangaDexToJikan(manga: MangaDexManga, coverUrl: string): JikanManga {
@@ -39,7 +51,7 @@ function adaptMangaDexToJikan(manga: MangaDexManga, coverUrl: string): JikanMang
       webp: { image_url: coverUrl, small_image_url: coverUrl, large_image_url: coverUrl },
     },
     title: mainTitle,
-    type: manga.attributes.publicationDemographic || manga.type,
+    type: normalizeMangaType(manga.attributes.publicationDemographic || manga.type),
     chapters: manga.attributes.lastChapter ? parseFloat(manga.attributes.lastChapter) : null,
     status: manga.attributes.status,
     score: null, // MangaDex API não fornece score diretamente na busca
@@ -72,7 +84,7 @@ function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
        },
     },
     title: manga.attributes.canonicalTitle,
-    type: manga.attributes.mangaType || "manga",
+    type: normalizeMangaType(manga.attributes.mangaType),
     chapters: manga.attributes.chapterCount,
     status: manga.attributes.status,
     score: manga.attributes.averageRating ? parseFloat(manga.attributes.averageRating) / 10 : null,
@@ -92,7 +104,7 @@ function adaptMangaUpdatesToJikan(manga: MangaUpdatesManga): JikanManga {
             webp: { image_url: imageUrl, small_image_url: imageUrl, large_image_url: imageUrl },
         },
         title: manga.title,
-        type: manga.type,
+        type: normalizeMangaType(manga.type),
         chapters: manga.latest_chapter,
         status: 'ongoing', // A API de busca não informa o status
         score: manga.bayesian_rating,
@@ -157,7 +169,8 @@ export default function SearchPage() {
           const response = await fetch(`https://api.jikan.moe/v4/manga?q=${encodeURIComponent(debouncedSearchTerm.trim())}&sfw`);
           if (response.ok) {
             const data = await response.json();
-            return (data.data || []) as JikanManga[];
+            const jikanResults = (data.data || []) as JikanManga[];
+            return jikanResults.map(m => ({...m, type: normalizeMangaType(m.type)}));
           }
         } catch (error) { console.warn("Jikan API request failed:", error); }
         return [];
@@ -170,10 +183,11 @@ export default function SearchPage() {
 
             const result = await response.json();
             if (result.result !== 'ok' || !Array.isArray(result.data)) return [];
-
+            
             const coverArtMap = new Map<string, string>();
             result.data.forEach((item: any) => {
-                if (item.type === 'cover_art' && item.attributes) {
+                if (item.type === 'cover_art' && item.attributes?.fileName) {
+                    // O ID da capa é o ID do próprio objeto de capa
                     coverArtMap.set(item.id, item.attributes.fileName);
                 }
             });

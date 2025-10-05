@@ -3,7 +3,7 @@
 
 import React, { createContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { collection, doc, onSnapshot, writeBatch, Timestamp, Firestore, Unsubscribe } from 'firebase/firestore';
-import { Manga, MangaStatus } from '@/lib/data';
+import { Manga, MangaStatus, MangaType } from '@/lib/data';
 import { JikanManga } from '@/lib/jikan-data';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
@@ -173,7 +173,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     const newManga: Manga = {
       id: mangaId,
       title: manga.title,
-      type: (manga.type as Manga['type']) || "Mangá",
+      type: manga.type as MangaType, // O tipo já foi normalizado na busca
       status: "Planejo Ler",
       coverImageId: '',
       imageUrl: manga.images.webp.large_image_url || manga.images.webp.image_url,

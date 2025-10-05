@@ -51,7 +51,7 @@
         },
         "type": {
           "type": "string",
-          "enum": ["Mangá", "Manhwa", "Webtoon"]
+          "enum": ["Mangá", "Manhwa", "Webtoon", "Novel", "Outro"]
         },
         "status": {
           "type": "string",
