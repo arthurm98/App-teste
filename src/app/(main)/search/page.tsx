@@ -126,34 +126,34 @@ export default function SearchPage() {
       };
 
       const searchMangaDex = async () => {
-          try {
-              const mangaResponse = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art`);
-              if (mangaResponse.ok) {
-                  const mangaData = await mangaResponse.json();
-                  if (mangaData.data && mangaData.data.length > 0) {
-                      // 1. Create a map of all cover art filenames.
-                      const coverArtMap = new Map<string, string>();
-                      mangaData.data.forEach((manga: MangaDexManga) => {
-                          const coverArtRelationship = manga.relationships.find(rel => rel.type === 'cover_art');
-                          if (coverArtRelationship && coverArtRelationship.attributes?.fileName) {
-                              coverArtMap.set(manga.id, coverArtRelationship.attributes.fileName);
-                          }
-                      });
+        try {
+          const mangaResponse = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art`);
+          if (mangaResponse.ok) {
+            const mangaData = await mangaResponse.json();
+            if (mangaData.data && mangaData.data.length > 0) {
+              const coverArtMap = new Map<string, string>();
+              mangaData.data.forEach((item: MangaDexManga | Relationship) => {
+                if (item.type === 'cover_art' && item.attributes?.fileName) {
+                  coverArtMap.set(item.id, item.attributes.fileName);
+                }
+              });
 
-                      // 2. Map manga data and find the corresponding cover.
-                      return mangaData.data.map((manga: MangaDexManga) => {
-                          const coverFileName = coverArtMap.get(manga.id);
-                          const coverUrl = coverFileName 
-                              ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}.256.jpg`
-                              : "";
-                          return adaptMangaDexToJikan(manga, coverUrl);
-                      });
-                  }
-              }
-          } catch (error) {
-              console.warn("MangaDex API request failed:", error);
+              return mangaData.data
+                .filter((item: any): item is MangaDexManga => item.type === 'manga')
+                .map((manga: MangaDexManga) => {
+                  const coverRel = manga.relationships.find(rel => rel.type === 'cover_art');
+                  const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
+                  const coverUrl = coverFileName 
+                    ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}`
+                    : "https://mangadex.org/img/avatar.png"; // Fallback image
+                  return adaptMangaDexToJikan(manga, coverUrl);
+                });
+            }
           }
-          return [];
+        } catch (error) {
+          console.warn("MangaDex API request failed:", error);
+        }
+        return [];
       };
 
       const searchKitsu = async () => {
