@@ -20,6 +20,8 @@ import {
 
 type ApiSource = "Auto" | "Jikan" | "MangaDex" | "Kitsu";
 
+const CACHE_PREFIX = "mangatrack_search_";
+
 // Função para adaptar os dados da MangaDex para o formato JikanManga
 function adaptMangaDexToJikan(manga: MangaDexManga, coverUrl: string): JikanManga {
   const titleObj = manga.attributes.title;
@@ -108,6 +110,20 @@ export default function SearchPage() {
         setSearchResults([]);
         return;
       }
+
+      const cacheKey = `${CACHE_PREFIX}${apiSource}_${debouncedSearchTerm.trim().toLowerCase()}`;
+      try {
+        const cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) {
+          console.log("Servindo resultados do cache para:", debouncedSearchTerm);
+          startTransition(() => {
+             setSearchResults(JSON.parse(cachedData));
+          });
+          return;
+        }
+      } catch (error) {
+        console.warn("Não foi possível ler o cache da sessão:", error);
+      }
       
       setIsSearching(true);
       let results: JikanManga[] = [];
@@ -128,7 +144,7 @@ export default function SearchPage() {
       const searchMangaDex = async () => {
         try {
             const response = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art&limit=20`);
-            if (!response.ok) {
+             if (!response.ok) {
                 console.warn("MangaDex API request failed with status:", response.status);
                 return [];
             }
@@ -139,25 +155,21 @@ export default function SearchPage() {
                 return [];
             }
 
-            const mangaData = result.data as (MangaDexManga | { type: 'cover_art', id: string, attributes: { fileName: string } })[];
-            
-            // 1. Create a map of cover art IDs to their file names
             const coverArtMap = new Map<string, string>();
-            mangaData
-              .filter((item): item is { type: 'cover_art', id: string, attributes: { fileName: string } } => item.type === 'cover_art')
-              .forEach(coverArt => {
-                coverArtMap.set(coverArt.id, coverArt.attributes.fileName);
-              });
-            
-            // 2. Filter for manga entities and adapt them
-            const mangaList = mangaData.filter((item): item is MangaDexManga => item.type === 'manga');
+            result.data.forEach((item: any) => {
+                if (item.type === 'cover_art') {
+                    coverArtMap.set(item.id, item.attributes.fileName);
+                }
+            });
+
+            const mangaList = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
 
             return mangaList.map((manga: MangaDexManga) => {
                 const coverRel = manga.relationships.find(rel => rel.type === 'cover_art');
                 const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
                 const coverUrl = coverFileName
                     ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}`
-                    : "https://mangadex.org/img/avatar.png"; // Fallback
+                    : "https://mangadex.org/img/avatar.png"; 
                 return adaptMangaDexToJikan(manga, coverUrl);
             });
 
@@ -204,6 +216,13 @@ export default function SearchPage() {
 
       startTransition(() => {
         setSearchResults(results);
+        if (results.length > 0) {
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify(results));
+          } catch (error) {
+            console.warn("Não foi possível escrever no cache da sessão:", error);
+          }
+        }
       });
 
       if (finalError && results.length === 0) {
