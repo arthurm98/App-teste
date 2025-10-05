@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -28,13 +29,21 @@ export function GenreChart() {
         return acc
       }, {} as Record<string, number>)
 
-    return Object.entries(genreCounts)
+    const sortedGenres = Object.entries(genreCounts)
       .map(([genre, count]) => ({ genre, count }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 7)
+      
+    // Garante que sempre haverá 7 itens para exibição, preenchendo com valores vazios se necessário
+    const top7 = sortedGenres.slice(0, 7);
+    while (top7.length < 7) {
+        top7.push({ genre: ` `, count: 0 }); // Adiciona um espaço para não quebrar o layout
+    }
+    
+    return top7;
+
   }, [library])
 
-  if (chartData.length === 0) {
+  if (library.length === 0) {
     return <div className="flex h-[300px] w-full items-center justify-center text-muted-foreground">Nenhum dado de gênero para exibir.</div>
   }
 
@@ -57,7 +66,8 @@ export function GenreChart() {
           tickMargin={10}
           axisLine={false}
           tickFormatter={(value) => value}
-          className="text-xs"
+          className="text-xs truncate"
+          width={80}
         />
         <XAxis dataKey="count" type="number" hide />
         <ChartTooltip
