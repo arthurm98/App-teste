@@ -54,17 +54,18 @@ function adaptMangaDexToJikan(manga: MangaDexManga, coverUrl: string): JikanMang
 
 // Função para adaptar os dados da Kitsu para o formato JikanManga
 function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
+  const imageUrl = manga.attributes.posterImage?.original || "";
   return {
     mal_id: 0, // Kitsu não fornece mal_id
     url: `https://kitsu.io/manga/${manga.attributes.slug}`,
     images: {
       jpg: { 
-        image_url: manga.attributes.posterImage?.original || "",
+        image_url: imageUrl,
         small_image_url: manga.attributes.posterImage?.small || "",
         large_image_url: manga.attributes.posterImage?.large || "",
        },
       webp: { 
-        image_url: manga.attributes.posterImage?.original || "",
+        image_url: imageUrl,
         small_image_url: manga.attributes.posterImage?.small || "",
         large_image_url: manga.attributes.posterImage?.large || "",
        },
@@ -144,17 +145,13 @@ export default function SearchPage() {
       const searchMangaDex = async () => {
         try {
             const response = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art&limit=20`);
-             if (!response.ok) {
-                console.warn("MangaDex API request failed with status:", response.status);
-                return [];
-            }
             const result = await response.json();
 
             if (result.result !== 'ok' || !Array.isArray(result.data)) {
                 console.warn("MangaDex API returned non-ok result or invalid data format.");
                 return [];
             }
-
+            
             const coverArtMap = new Map<string, string>();
             result.data.forEach((item: any) => {
                 if (item.type === 'cover_art') {

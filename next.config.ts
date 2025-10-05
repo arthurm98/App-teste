@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 import withPWA from 'next-pwa';
 
@@ -38,6 +39,18 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "uploads.mangadex.org",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "media.kitsu.io",
+        port: "",
+        pathname: "/**",
+      },
+       {
+        protocol: "https",
+        hostname: "media.kitsu.app",
         port: "",
         pathname: "/**",
       },
