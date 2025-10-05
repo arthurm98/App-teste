@@ -56,12 +56,6 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "api.mangaupdates.com",
-        port: "",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
         hostname: "s4.anilist.co",
         port: "",
         pathname: "/**",
@@ -78,3 +72,5 @@ const pwaConfig = {
 };
 
 export default withPWA(pwaConfig)(nextConfig);
+
+    
