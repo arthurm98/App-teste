@@ -160,8 +160,8 @@ export default function SearchPage() {
       
       setIsSearching(true);
       let results: JikanManga[] = [];
+      const failedApis: string[] = [];
 
-      // Funções de busca por API
       const searchJikan = async () => {
         try {
           const response = await fetch(`https://api.jikan.moe/v4/manga?q=${encodeURIComponent(debouncedSearchTerm.trim())}&sfw`);
@@ -170,21 +170,27 @@ export default function SearchPage() {
             const jikanResults = (data.data || []) as JikanManga[];
             return jikanResults.map(m => ({...m, type: normalizeMangaType(m.type)}));
           }
-        } catch (error) { console.warn("Jikan API request failed:", error); }
+          throw new Error(`Status: ${response.status}`);
+        } catch (error) { 
+          console.warn("Jikan API request failed:", error);
+          failedApis.push("Jikan");
+        }
         return [];
       };
 
       const searchMangaDex = async () => {
         try {
-          const baseUrl = 'https://api.mangadex.org/manga';
+          const baseUrl = 'https://api.mangadex.org';
           const params = new URLSearchParams({
             title: debouncedSearchTerm.trim(),
             limit: '20',
             order: '{"relevance":"desc"}',
             'includes[]': 'cover_art'
           });
-          const response = await fetch(`${baseUrl}?${params.toString()}`);
-          if (!response.ok) return [];
+          const response = await fetch(`${baseUrl}/manga?${params.toString()}`);
+           if (!response.ok) {
+            throw new Error(`Status: ${response.status}`);
+          }
       
           const result = await response.json();
           if (result.result !== 'ok' || !Array.isArray(result.data)) return [];
@@ -199,6 +205,7 @@ export default function SearchPage() {
           });
         } catch (error) {
           console.warn("MangaDex API request failed:", error);
+          failedApis.push("MangaDex");
         }
         return [];
       };
@@ -206,13 +213,18 @@ export default function SearchPage() {
       const searchKitsu = async () => {
         try {
           const kitsuResponse = await fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(debouncedSearchTerm.trim())}`);
-          if (kitsuResponse.ok) {
+           if (!kitsuResponse.ok) {
+            throw new Error(`Status: ${kitsuResponse.status}`);
+          }
             const kitsuData = await kitsuResponse.json();
             if (kitsuData.data && kitsuData.data.length > 0) {
               return kitsuData.data.map(adaptKitsuToJikan);
             }
-          }
-        } catch (error) { console.warn("Kitsu API request failed:", error); }
+            return [];
+        } catch (error) { 
+          console.warn("Kitsu API request failed:", error);
+          failedApis.push("Kitsu");
+        }
         return [];
       };
 
@@ -264,14 +276,14 @@ export default function SearchPage() {
             const anilistResults = (data.data?.Page?.media || []) as AniListManga[];
             return anilistResults.map(adaptAniListToJikan);
           }
+           throw new Error(`Status: ${response.status}`);
         } catch (error) {
           console.warn("AniList API request failed:", error);
+          failedApis.push("AniList");
         }
         return [];
       };
 
-
-      // Lógica de busca baseada na fonte da API
       if (apiSource === "Jikan") {
         results = await searchJikan();
       } else if (apiSource === "MangaDex") {
@@ -311,11 +323,14 @@ export default function SearchPage() {
       }
       
       if (results.length === 0) {
+        let description = "Nenhum título foi encontrado com esse termo. Tente outra palavra-chave.";
+        if (failedApis.length > 0) {
+            description = `Provável que ${failedApis.join(", ")} esteja com problemas. Tente outra API ou palavra-chave.`
+        }
         toast({
          variant: "destructive",
          title: "Nenhum Resultado",
-         description:
-           "Nenhum título foi encontrado com esse termo. Tente outra API ou palavra-chave.",
+         description: description,
        });
      }
 
