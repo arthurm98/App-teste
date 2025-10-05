@@ -131,21 +131,15 @@ export default function SearchPage() {
               if (mangaResponse.ok) {
                   const mangaData = await mangaResponse.json();
                   if (mangaData.data && mangaData.data.length > 0) {
-                      // 1. Create a map of all cover art objects from the response relationships.
+                      // 1. Create a map of all cover art filenames.
                       const coverArtMap = new Map<string, string>();
-                      if (mangaData.data) {
-                          for (const item of mangaData.data) {
-                              if (item.relationships) {
-                                  for (const rel of item.relationships) {
-                                      if (rel.type === 'cover_art' && rel.attributes?.fileName) {
-                                          // The key is the manga ID, the value is the filename.
-                                          coverArtMap.set(item.id, rel.attributes.fileName);
-                                      }
-                                  }
-                              }
+                      mangaData.data.forEach((manga: MangaDexManga) => {
+                          const coverArtRelationship = manga.relationships.find(rel => rel.type === 'cover_art');
+                          if (coverArtRelationship && coverArtRelationship.attributes?.fileName) {
+                              coverArtMap.set(manga.id, coverArtRelationship.attributes.fileName);
                           }
-                      }
-                      
+                      });
+
                       // 2. Map manga data and find the corresponding cover.
                       return mangaData.data.map((manga: MangaDexManga) => {
                           const coverFileName = coverArtMap.get(manga.id);
