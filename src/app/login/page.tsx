@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFormState } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth, useUser } from '@/firebase';
@@ -13,8 +13,9 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { Book } from 'lucide-react';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signInAnonymously } from 'firebase/auth';
+import { Book, User as UserIcon } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor, insira um email válido.' }),
@@ -133,15 +134,31 @@ export default function LoginPage() {
               title: "E-mail de redefinição enviado",
               description: `Se uma conta para ${data.resetEmail} existir, um e-mail foi enviado. Verifique sua caixa de entrada.`,
           });
-          reset(); // Limpa o formulário do dialog
-          // A linha abaixo fecharia o Dialog, mas vamos deixar o usuário fechar manualmente
-          // document.getElementById('close-reset-dialog')?.click();
+          reset(); 
+          document.getElementById('close-reset-dialog')?.click();
       } catch (error) {
-          handleAuthError(error); // Reutilizamos nosso error handler
+          handleAuthError(error); 
       } finally {
           setIsResetting(false);
       }
   };
+
+  const handleAnonymousLogin = async () => {
+      setIsSubmitting(true);
+      try {
+          await signInAnonymously(auth);
+          toast({
+              title: "Modo anônimo ativado",
+              description: "Sua biblioteca será salva neste dispositivo. Crie uma conta para sincronizar na nuvem.",
+          });
+          // O useEffect cuidará do redirecionamento
+      } catch (error) {
+          handleAuthError(error);
+      } finally {
+          setIsSubmitting(false);
+      }
+  }
+
 
   if (isUserLoading || user) {
     return (
@@ -198,6 +215,20 @@ export default function LoginPage() {
               </Button>
             </div>
           </form>
+          <div className="relative my-4">
+            <Separator />
+            <span className="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-background px-2 text-xs text-muted-foreground">OU</span>
+          </div>
+            <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                onClick={handleAnonymousLogin}
+                disabled={isSubmitting}
+              >
+                <UserIcon className="mr-2 h-4 w-4" />
+                {isSubmitting ? 'Aguarde...' : 'Continuar como Anônimo'}
+              </Button>
         </CardContent>
         <CardFooter className="flex-col gap-4">
            <Dialog>

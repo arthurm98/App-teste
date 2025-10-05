@@ -6,7 +6,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth, useUser } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { LogOut, User as UserIcon, Loader2, LogIn } from 'lucide-react';
 import { signOut } from 'firebase/auth';
@@ -18,18 +18,22 @@ function UserNav() {
 
   const handleLogout = async () => {
     await signOut(auth);
-    // Após o logout, o usuário permanece no app, mas em modo local.
-    // A página não precisa ser recarregada, o useUser cuidará da atualização do estado.
-    router.push('/'); 
+    // Redireciona para a página de login após o logout.
+    router.push('/login'); 
   };
+
+  const handleLoginRedirect = () => {
+    router.push('/login');
+  }
 
   if (isUserLoading) {
     return <Loader2 className="h-6 w-6 animate-spin" />;
   }
-
-  if (!user) {
+  
+  // O usuário anônimo tem um botão de login para converter a conta.
+  if (!user || user.isAnonymous) {
     return (
-       <Button variant="ghost" onClick={() => router.push('/login')}>
+       <Button variant="ghost" onClick={handleLoginRedirect}>
          <LogIn className="mr-2 h-4 w-4" />
          Login
       </Button>
@@ -58,10 +62,12 @@ function UserNav() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Sair</span>
-        </DropdownMenuItem>
+        <DropdownMenuGroup>
+          <DropdownMenuItem onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Sair</span>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )
