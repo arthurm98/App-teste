@@ -157,7 +157,7 @@ export default function SearchPage() {
           const response = await fetch(`https://api.jikan.moe/v4/manga?q=${encodeURIComponent(debouncedSearchTerm.trim())}&sfw`);
           if (response.ok) {
             const data = await response.json();
-            return data.data || [];
+            return (data.data || []) as JikanManga[];
           }
         } catch (error) { console.warn("Jikan API request failed:", error); }
         return [];
@@ -165,29 +165,29 @@ export default function SearchPage() {
 
       const searchMangaDex = async () => {
         try {
-          const response = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art&limit=20&order[relevance]=desc`);
-          if (!response.ok) return [];
+            const response = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art&limit=20&order[relevance]=desc`);
+            if (!response.ok) return [];
 
-          const result = await response.json();
-          if (result.result !== 'ok' || !Array.isArray(result.data)) return [];
-          
-          const coverArtMap = new Map<string, string>();
+            const result = await response.json();
+            if (result.result !== 'ok' || !Array.isArray(result.data)) return [];
+
+            const coverArtMap = new Map<string, string>();
             result.data.forEach((item: any) => {
                 if (item.type === 'cover_art' && item.attributes) {
                     coverArtMap.set(item.id, item.attributes.fileName);
                 }
             });
 
-          const mangaList: MangaDexManga[] = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
+            const mangaList: MangaDexManga[] = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
 
-          return mangaList.map((manga: MangaDexManga) => {
-            const coverRel = manga.relationships.find((rel: Relationship) => rel.type === 'cover_art');
-            const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
-            const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : "";
-            return adaptMangaDexToJikan(manga, coverUrl);
-          });
+            return mangaList.map((manga: MangaDexManga) => {
+                const coverRel = manga.relationships.find((rel: Relationship) => rel.type === 'cover_art');
+                const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
+                const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : "";
+                return adaptMangaDexToJikan(manga, coverUrl);
+            });
         } catch (error) {
-          console.warn("MangaDex API request failed:", error);
+            console.warn("MangaDex API request failed:", error);
         }
         return [];
       };
@@ -237,17 +237,34 @@ export default function SearchPage() {
         results = await searchKitsu();
       } else if (apiSource === "MangaUpdates") {
         results = await searchMangaUpdates();
-      } else { // Auto
-        results = await searchJikan();
-        if (results.length === 0) {
-          results = await searchMangaDex();
-        }
-        if (results.length === 0) {
-          results = await searchKitsu();
-        }
-        if (results.length === 0) {
-            results = await searchMangaUpdates();
-        }
+      } else { // Auto - Busca em paralelo e agrega os resultados
+        const allSearches = await Promise.allSettled([
+            searchJikan(),
+            searchMangaDex(),
+            searchKitsu(),
+            searchMangaUpdates(),
+        ]);
+
+        let combinedResults: JikanManga[] = [];
+        allSearches.forEach(result => {
+            if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+                combinedResults.push(...result.value);
+            }
+        });
+
+        // Remove duplicados baseando-se no título (case-insensitive)
+        const uniqueTitles = new Set<string>();
+        results = combinedResults.filter(manga => {
+            const lowerCaseTitle = manga.title.toLowerCase();
+            if (!uniqueTitles.has(lowerCaseTitle)) {
+                uniqueTitles.add(lowerCaseTitle);
+                return true;
+            }
+            return false;
+        });
+
+        // Ordena os resultados por score (se disponível), do maior para o menor
+        results.sort((a, b) => (b.score || 0) - (a.score || 0));
       }
       
       if (results.length === 0) {
