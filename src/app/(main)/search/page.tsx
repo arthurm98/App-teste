@@ -127,31 +127,37 @@ export default function SearchPage() {
 
       const searchMangaDex = async () => {
         try {
-          const mangaResponse = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art`);
-          if (mangaResponse.ok) {
-            const mangaData = await mangaResponse.json();
-            if (mangaData.data && mangaData.data.length > 0) {
-              const coverArtMap = new Map<string, string>();
-              mangaData.data.forEach((item: MangaDexManga | Relationship) => {
-                if (item.type === 'cover_art' && item.attributes?.fileName) {
-                  coverArtMap.set(item.id, item.attributes.fileName);
-                }
-              });
-
-              return mangaData.data
-                .filter((item: any): item is MangaDexManga => item.type === 'manga')
-                .map((manga: MangaDexManga) => {
-                  const coverRel = manga.relationships.find(rel => rel.type === 'cover_art');
-                  const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
-                  const coverUrl = coverFileName 
-                    ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}`
-                    : "https://mangadex.org/img/avatar.png"; // Fallback image
-                  return adaptMangaDexToJikan(manga, coverUrl);
-                });
+            const response = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art&limit=20`);
+            if (!response.ok) {
+                console.warn("MangaDex API request failed with status:", response.status);
+                return [];
             }
-          }
+            const result = await response.json();
+            if (result.result !== 'ok' || !Array.isArray(result.data)) {
+                console.warn("MangaDex API returned non-ok result or invalid data format.");
+                return [];
+            }
+            
+            const coverArtMap = new Map<string, string>();
+            result.data.forEach((entity: MangaDexManga | Relationship) => {
+                if (entity.type === 'cover_art' && entity.attributes?.fileName) {
+                    coverArtMap.set(entity.id, entity.attributes.fileName);
+                }
+            });
+
+            const mangaList = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
+            
+            return mangaList.map((manga: MangaDexManga) => {
+                const coverRel = manga.relationships.find(rel => rel.type === 'cover_art');
+                const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
+                const coverUrl = coverFileName
+                    ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}`
+                    : "https://mangadex.org/img/avatar.png"; // Fallback
+                return adaptMangaDexToJikan(manga, coverUrl);
+            });
+
         } catch (error) {
-          console.warn("MangaDex API request failed:", error);
+            console.warn("MangaDex API request failed:", error);
         }
         return [];
       };
@@ -198,9 +204,9 @@ export default function SearchPage() {
       if (finalError && results.length === 0) {
          toast({
           variant: "destructive",
-          title: "Erro na Busca",
+          title: "Nenhum Resultado",
           description:
-            "Não foi possível buscar os mangás. Verifique o termo ou a fonte da API.",
+            "Nenhum título foi encontrado com esse termo. Tente outra API ou palavra-chave.",
         });
       }
 
@@ -274,5 +280,3 @@ export default function SearchPage() {
     </div>
   );
 }
-
-    
