@@ -10,6 +10,15 @@ import type { MangaDexManga } from "@/lib/mangadex-data";
 import type { KitsuManga } from "@/lib/kitsu-data";
 import { OnlineMangaCard } from "../_components/online-manga-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type ApiSource = "Auto" | "Jikan" | "MangaDex" | "Kitsu";
 
 // Função para adaptar os dados da MangaDex para o formato JikanManga
 function adaptMangaDexToJikan(manga: MangaDexManga, coverUrl: string): JikanManga {
@@ -70,6 +79,8 @@ export default function SearchPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const [apiSource, setApiSource] = useState<ApiSource>("Auto");
+
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -96,63 +107,70 @@ export default function SearchPage() {
       let results: JikanManga[] = [];
       let finalError = false;
 
-      // 1. Tentar buscar na API Jikan
-      try {
-        const response = await fetch(
-          `https://api.jikan.moe/v4/manga?q=${encodeURIComponent(debouncedSearchTerm.trim())}&sfw`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          if (data.data && data.data.length > 0) {
-            results = data.data;
+      // Funções de busca por API
+      const searchJikan = async () => {
+        try {
+          const response = await fetch(`https://api.jikan.moe/v4/manga?q=${encodeURIComponent(debouncedSearchTerm.trim())}&sfw`);
+          if (response.ok) {
+            const data = await response.json();
+            return data.data || [];
           }
-        } else {
-           console.warn("Jikan API request failed with status:", response.status);
-        }
-      } catch (error) {
-        console.warn("Jikan API request failed:", error);
-      }
+        } catch (error) { console.warn("Jikan API request failed:", error); }
+        return [];
+      };
 
-      // 2. Se Jikan falhar ou não retornar resultados, tentar MangaDex
-      if (results.length === 0) {
+      const searchMangaDex = async () => {
         try {
           const mangaResponse = await fetch(`https://api.mangadex.org/manga?title=${encodeURIComponent(debouncedSearchTerm.trim())}&includes[]=cover_art`);
           if (mangaResponse.ok) {
             const mangaData = await mangaResponse.json();
             if (mangaData.data && mangaData.data.length > 0) {
-                results = mangaData.data.map((manga: MangaDexManga) => {
-                    const coverArt = manga.relationships.find(rel => rel.type === 'cover_art');
-                    const coverFileName = coverArt?.attributes?.fileName;
-                    const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}.256.jpg` : "";
-                    return adaptMangaDexToJikan(manga, coverUrl);
-                });
+              return mangaData.data.map((manga: MangaDexManga) => {
+                const coverArt = manga.relationships.find(rel => rel.type === 'cover_art');
+                const coverFileName = coverArt?.attributes?.fileName;
+                const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}.256.jpg` : "";
+                return adaptMangaDexToJikan(manga, coverUrl);
+              });
             }
-          } else {
-             console.warn("MangaDex API request failed with status:", mangaResponse.status);
           }
-        } catch (error) {
-          console.warn("MangaDex API request failed:", error);
+        } catch (error) { console.warn("MangaDex API request failed:", error); }
+        return [];
+      };
+
+      const searchKitsu = async () => {
+        try {
+          const kitsuResponse = await fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(debouncedSearchTerm.trim())}`);
+          if (kitsuResponse.ok) {
+            const kitsuData = await kitsuResponse.json();
+            if (kitsuData.data && kitsuData.data.length > 0) {
+              return kitsuData.data.map(adaptKitsuToJikan);
+            }
+          }
+        } catch (error) { console.warn("Kitsu API request failed:", error); }
+        return [];
+      };
+
+      // Lógica de busca baseada na fonte da API
+      if (apiSource === "Jikan") {
+        results = await searchJikan();
+      } else if (apiSource === "MangaDex") {
+        results = await searchMangaDex();
+      } else if (apiSource === "Kitsu") {
+        results = await searchKitsu();
+      } else { // Auto
+        results = await searchJikan();
+        if (results.length === 0) {
+          results = await searchMangaDex();
+        }
+        if (results.length === 0) {
+          results = await searchKitsu();
         }
       }
       
-      // 3. Se ambos falharem, tentar Kitsu
       if (results.length === 0) {
-        try {
-          const kitsuResponse = await fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(debouncedSearchTerm.trim())}`);
-           if (kitsuResponse.ok) {
-            const kitsuData = await kitsuResponse.json();
-            if (kitsuData.data && kitsuData.data.length > 0) {
-                results = kitsuData.data.map(adaptKitsuToJikan);
-            }
-          } else {
-             console.warn("Kitsu API request failed with status:", kitsuResponse.status);
-             finalError = true;
-          }
-        } catch (error) {
-            console.warn("Kitsu API request failed:", error);
-            finalError = true;
-        }
+        finalError = true;
       }
+
 
       startTransition(() => {
         setSearchResults(results);
@@ -163,7 +181,7 @@ export default function SearchPage() {
           variant: "destructive",
           title: "Erro na Busca",
           description:
-            "Não foi possível buscar os mangás. Todas as fontes falharam.",
+            "Não foi possível buscar os mangás. Verifique o termo ou a fonte da API.",
         });
       }
 
@@ -171,7 +189,7 @@ export default function SearchPage() {
     };
 
     fetchMangas();
-  }, [debouncedSearchTerm, toast]);
+  }, [debouncedSearchTerm, toast, apiSource]);
 
   const isLoading = isSearching || isPending;
 
@@ -180,16 +198,32 @@ export default function SearchPage() {
       <h1 className="text-3xl font-headline font-bold mb-6">
         Buscar Títulos Online
       </h1>
-      <div className="relative mb-8 max-w-lg">
-        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Buscar um mangá, manhwa ou webtoon..."
-          className="pl-10 text-sm"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      <div className="flex flex-col sm:flex-row gap-4 mb-8">
+        <div className="relative flex-grow">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Buscar um mangá, manhwa ou webtoon..."
+            className="pl-10 text-sm w-full"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="w-full sm:w-48">
+          <Select value={apiSource} onValueChange={(value) => setApiSource(value as ApiSource)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Fonte da API" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Auto">Automático</SelectItem>
+              <SelectItem value="Jikan">Jikan (MAL)</SelectItem>
+              <SelectItem value="MangaDex">MangaDex</SelectItem>
+              <SelectItem value="Kitsu">Kitsu</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
 
       <div>
         <h2 className="text-2xl font-headline font-semibold mb-4">
