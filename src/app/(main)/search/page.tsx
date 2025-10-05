@@ -184,19 +184,15 @@ export default function SearchPage() {
           if (result.result !== 'ok' || !Array.isArray(result.data)) return [];
       
           const mangaList = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
-          const coverArtList = result.data.filter((item: any): item is Relationship => item.type === 'cover_art');
-      
-          const coverArtMap = new Map<string, string>();
-          coverArtList.forEach(cover => {
-            if (cover.id && cover.attributes?.fileName) {
-              coverArtMap.set(cover.id, cover.attributes.fileName);
-            }
-          });
+          
+          // O `includes[]=cover_art` garante que os dados da capa estejam em `relationships`.
+          // Não é necessário filtrar um `coverArtList` separado do `result.data` todo.
       
           return mangaList.map((manga: MangaDexManga) => {
             const coverRel = manga.relationships.find((rel: Relationship) => rel.type === 'cover_art');
-            const coverFileName = coverRel ? coverArtMap.get(coverRel.id) : undefined;
-            const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : "";
+            // O atributo da capa pode estar em `attributes` do próprio relacionamento
+            const coverFileName = coverRel?.attributes?.fileName; 
+            const coverUrl = (coverFileName && manga.id) ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : "";
             return adaptMangaDexToJikan(manga, coverUrl);
           });
         } catch (error) {
@@ -224,7 +220,6 @@ export default function SearchPage() {
                   method: 'POST',
                   headers: {
                       'Content-Type': 'application/json',
-                      'User-Agent': 'MangaTrack/1.0',
                   },
                   body: JSON.stringify({
                       search: debouncedSearchTerm.trim(),
@@ -369,6 +364,5 @@ export default function SearchPage() {
       </div>
     </div>
   );
-}
 
     
