@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import type { JikanManga } from "@/lib/jikan-data";
 import type { MangaDexManga, Relationship } from "@/lib/mangadex-data";
 import type { KitsuManga } from "@/lib/kitsu-data";
+import type { MangaUpdatesManga } from "@/lib/mangaupdates-data";
+import type { AniListManga } from "@/lib/anilist-data";
 import { OnlineMangaCard } from "../_components/online-manga-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -17,10 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MangaUpdatesManga } from "@/lib/mangaupdates-data";
 import { MangaType } from "@/lib/data";
 
-type ApiSource = "Auto" | "Jikan" | "MangaDex" | "Kitsu" | "MangaUpdates";
+type ApiSource = "Auto" | "Jikan" | "MangaDex" | "Kitsu" | "MangaUpdates" | "AniList";
 
 const CACHE_PREFIX = "mangatrack_search_";
 
@@ -113,6 +114,26 @@ function adaptMangaUpdatesToJikan(manga: MangaUpdatesManga): JikanManga {
     };
 }
 
+// Função para adaptar os dados da AniList para o formato JikanManga
+function adaptAniListToJikan(manga: AniListManga): JikanManga {
+    const imageUrl = manga.coverImage.extraLarge || manga.coverImage.large || "";
+    return {
+        mal_id: manga.id, // AniList ID pode ser usado aqui
+        url: manga.siteUrl,
+        images: {
+            jpg: { image_url: imageUrl, small_image_url: imageUrl, large_image_url: imageUrl },
+            webp: { image_url: imageUrl, small_image_url: imageUrl, large_image_url: imageUrl },
+        },
+        title: manga.title.romaji || manga.title.english || manga.title.native,
+        type: normalizeMangaType(manga.format),
+        chapters: manga.chapters,
+        status: manga.status,
+        score: manga.averageScore ? manga.averageScore / 10 : null, // AniList score é de 0-100
+        synopsis: manga.description,
+        genres: manga.genres.map(genre => ({ mal_id: 0, type: 'manga', name: genre, url: '' })),
+    };
+}
+
 
 export default function SearchPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -185,12 +206,8 @@ export default function SearchPage() {
       
           const mangaList = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
           
-          // O `includes[]=cover_art` garante que os dados da capa estejam em `relationships`.
-          // Não é necessário filtrar um `coverArtList` separado do `result.data` todo.
-      
           return mangaList.map((manga: MangaDexManga) => {
             const coverRel = manga.relationships.find((rel: Relationship) => rel.type === 'cover_art');
-            // O atributo da capa pode estar em `attributes` do próprio relacionamento
             const coverFileName = coverRel?.attributes?.fileName; 
             const coverUrl = (coverFileName && manga.id) ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : "";
             return adaptMangaDexToJikan(manga, coverUrl);
@@ -236,6 +253,61 @@ export default function SearchPage() {
           return [];
       };
 
+      const searchAniList = async () => {
+        const query = `
+          query ($search: String, $type: MediaType) {
+            Page(page: 1, perPage: 20) {
+              media(search: $search, type: $type, sort: [SEARCH_MATCH]) {
+                id
+                title {
+                  romaji
+                  english
+                  native
+                }
+                coverImage {
+                  extraLarge
+                  large
+                  color
+                }
+                format
+                status
+                description(asHtml: false)
+                chapters
+                averageScore
+                genres
+                siteUrl
+              }
+            }
+          }
+        `;
+        const variables = {
+          search: debouncedSearchTerm.trim(),
+          type: 'MANGA',
+        };
+        try {
+          const response = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+              query,
+              variables,
+            }),
+          });
+          if (response.ok) {
+            const data = await response.json();
+            const anilistResults = (data.data?.Page?.media || []) as AniListManga[];
+            return anilistResults.map(adaptAniListToJikan);
+          }
+        } catch (error) {
+          console.warn("AniList API request failed:", error);
+        }
+        return [];
+      };
+
+
       // Lógica de busca baseada na fonte da API
       if (apiSource === "Jikan") {
         results = await searchJikan();
@@ -245,12 +317,15 @@ export default function SearchPage() {
         results = await searchKitsu();
       } else if (apiSource === "MangaUpdates") {
         results = await searchMangaUpdates();
+      } else if (apiSource === "AniList") {
+        results = await searchAniList();
       } else { // Auto - Busca em paralelo e agrega os resultados
         const allSearches = await Promise.allSettled([
             searchJikan(),
             searchMangaDex(),
             searchKitsu(),
             searchMangaUpdates(),
+            searchAniList(),
         ]);
 
         let combinedResults: JikanManga[] = [];
@@ -329,6 +404,7 @@ export default function SearchPage() {
               <SelectItem value="MangaDex">MangaDex</SelectItem>
               <SelectItem value="Kitsu">Kitsu</SelectItem>
               <SelectItem value="MangaUpdates">MangaUpdates</SelectItem>
+              <SelectItem value="AniList">AniList</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -365,4 +441,4 @@ export default function SearchPage() {
     </div>
   );
 
-    
+}

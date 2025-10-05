@@ -59,6 +59,12 @@ const nextConfig: NextConfig = {
         hostname: "api.mangaupdates.com",
         port: "",
         pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "s4.anilist.co",
+        port: "",
+        pathname: "/**",
       }
     ],
   },
