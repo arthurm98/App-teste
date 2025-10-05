@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 const API_KEYS_STORAGE_KEY = "mangatrack-api-keys";
 
 type ApiKeys = {
-  jikan: string;
   mangaDex: string;
   kitsu: string;
   mangaUpdates: string;
@@ -19,7 +18,6 @@ type ApiKeys = {
 export function ApiKeysSettings() {
   const { toast } = useToast();
   const [apiKeys, setApiKeys] = useState<ApiKeys>({
-    jikan: "",
     mangaDex: "",
     kitsu: "",
     mangaUpdates: "",
@@ -60,17 +58,6 @@ export function ApiKeysSettings() {
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="jikan">Jikan (MyAnimeList)</Label>
-        <Input
-          id="jikan"
-          name="jikan"
-          type="password"
-          placeholder="Chave da API do Jikan"
-          value={apiKeys.jikan}
-          onChange={handleInputChange}
-        />
-      </div>
       <div className="space-y-2">
         <Label htmlFor="mangaDex">MangaDex</Label>
         <Input
