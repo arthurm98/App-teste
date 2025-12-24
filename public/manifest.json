@@ -1,21 +1,28 @@
 {
   "name": "MangaTrack",
   "short_name": "MangaTrack",
-  "description": "Organize e acompanhe seus mangás, manhwas e webtoons.",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#1E1B2E",
-  "theme_color": "#4F46E5",
+  "description": "Organize e acompanhe seus mangás, manhwas e webtoons em um só lugar.",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/maskable-icon.png",
+      "sizes": "196x196",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "theme_color": "#4F46E5",
+  "background_color": "#111827",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait"
 }
