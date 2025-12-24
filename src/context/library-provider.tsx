@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getLatestMangaInfo } from '@/services/update-manga';
+import type { Notification } from '@/app/(main)/_components/notifications-log';
 
 interface LibraryContextType {
   library: Manga[];
@@ -19,7 +20,7 @@ interface LibraryContextType {
   isMangaInLibrary: (mangaId: number, title?: string) => boolean;
   restoreLibrary: (newLibrary: Manga[]) => void;
   updateMangaDetails: (mangaId: string, details: Partial<Pick<Manga, 'totalChapters'>>) => void;
-  triggerUpdateCheck: () => void; // Nova função
+  triggerUpdateCheck: () => void;
   isLoading: boolean;
 }
 
@@ -27,8 +28,27 @@ export const LibraryContext = createContext<LibraryContextType | undefined>(unde
 
 const generateFallbackId = (title: string) => `fb-${title.toLowerCase().replace(/\s+/g, '-')}`;
 const LOCAL_STORAGE_KEY = 'mangatrack-library';
+const NOTIFICATIONS_KEY = 'mangatrack-notifications';
 const UPDATE_INTERVAL_DAYS = 7;
 const LAST_CHECK_KEY = 'mangatrack-last-check';
+
+const addNotification = (mangaTitle: string, message: string) => {
+    const newNotification: Notification = {
+        id: `${mangaTitle}-${new Date().getTime()}`,
+        mangaTitle,
+        message,
+        date: new Date().toISOString(),
+    };
+    try {
+        const existing = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]') as Notification[];
+        const updated = [newNotification, ...existing].slice(0, 50); // Limita a 50 notificações
+        localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updated));
+        // Dispara um evento para que outros componentes (como o log) possam reagir
+        window.dispatchEvent(new Event('storage'));
+    } catch (e) {
+        console.error("Falha ao salvar notificação", e);
+    }
+};
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const [localLibrary, setLocalLibrary] = useState<Manga[]>([]);
@@ -79,41 +99,47 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const performUpdateCheck = useCallback((mangasToCheck: Manga[]) => {
       console.log(`Iniciando verificação de ${mangasToCheck.length} mangás...`);
       let updatesFound = 0;
-      mangasToCheck.forEach(mangaData => {
+
+      const promises = mangasToCheck.map(mangaData => 
         getLatestMangaInfo(mangaData.id, mangaData.title).then(latestInfo => {
             if (latestInfo) {
                 const currentLatest = mangaData.latestChapter || mangaData.readChapters;
                 let hasUpdate = false;
                 const updates: Partial<Manga> = {};
+                let notificationMessage = '';
 
+                // Verifica se o capítulo mais recente da API é maior que o último que conhecíamos
                 if (latestInfo.latestChapter && latestInfo.latestChapter > currentLatest) {
-                    console.log(`"${mangaData.title}" tem um novo capítulo: ${latestInfo.latestChapter}.`);
                     updates.totalChapters = Math.max(mangaData.totalChapters || 0, latestInfo.latestChapter);
-                    updates.latestChapter = latestInfo.latestChapter;
+                    updates.latestChapter = latestInfo.latestChapter; // Atualiza nosso conhecimento
                     hasUpdate = true;
+                    notificationMessage = `Novo capítulo detectado: ${latestInfo.latestChapter}.`;
                 } else if (latestInfo.totalChapters && latestInfo.totalChapters > mangaData.totalChapters) {
-                    console.log(`"${mangaData.title}" atualizado para ${latestInfo.totalChapters} capítulos.`);
                     updates.totalChapters = latestInfo.totalChapters;
                     hasUpdate = true;
+                    notificationMessage = `Total de capítulos atualizado para ${latestInfo.totalChapters}.`;
                 }
                 
                 if (hasUpdate) {
                     updatesFound++;
                     updateLibraryItem(mangaData.id, updates);
+                    addNotification(mangaData.title, notificationMessage);
                 }
             }
-        });
-      });
+        })
+      );
       
-      if (updatesFound > 0) {
-        toast({
-            title: "Novos Capítulos Encontrados",
-            description: `A verificação encontrou novos capítulos para ${updatesFound} título(s).`,
-        });
-      }
+      Promise.all(promises).then(() => {
+        if (updatesFound > 0) {
+            toast({
+                title: "Novos Capítulos Encontrados",
+                description: `A verificação encontrou atualizações para ${updatesFound} título(s). Confira o log de notificações.`,
+            });
+        }
+        localStorage.setItem(LAST_CHECK_KEY, new Date().toISOString());
+        console.log("Verificação de atualização concluída.");
+      });
 
-      localStorage.setItem(LAST_CHECK_KEY, new Date().toISOString());
-      console.log("Verificação de atualização concluída.");
   }, [updateLibraryItem, toast]);
 
 
@@ -130,9 +156,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
         const lastCheck = localStorage.getItem(LAST_CHECK_KEY);
         let shouldCheck = forceCheck; // Usar o estado para forçar
-        if (!lastCheck) {
+        if (!shouldCheck && !lastCheck) {
             shouldCheck = true; // Primeira verificação
-        } else {
+        } else if (!shouldCheck && lastCheck) {
             const lastCheckDate = new Date(lastCheck);
             const now = new Date();
             const diffDays = (now.getTime() - lastCheckDate.getTime()) / (1000 * 60 * 60 * 24);

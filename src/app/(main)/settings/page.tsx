@@ -3,6 +3,8 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsContent } from "../_components/settings-content";
+import { NotificationsLog } from "../_components/notifications-log";
+import { Separator } from "@/components/ui/separator";
 
 export default function SettingsPage() {
     return (
@@ -31,6 +33,7 @@ export default function SettingsPage() {
                         <SettingsContent showSyncOptions />
                     </CardContent>
                 </Card>
+                <NotificationsLog />
             </div>
         </div>
     );
