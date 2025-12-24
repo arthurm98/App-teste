@@ -13,11 +13,22 @@ export default function SettingsPage() {
                     <CardHeader>
                         <CardTitle className="font-headline">Backup e Restauração</CardTitle>
                         <CardDescription>
-                            Faça backup dos dados da sua biblioteca ou restaure a partir de um arquivo de backup anterior. O backup só funciona no modo offline.
+                            Faça backup dos dados da sua biblioteca ou restaure a partir de um arquivo de backup anterior. A restauração só funciona no modo offline.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <SettingsContent />
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline">Sincronização de Capítulos</CardTitle>
+                        <CardDescription>
+                            O aplicativo verifica automaticamente por novos capítulos uma vez por semana. Você também pode forçar uma verificação manual para toda a sua biblioteca.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <SettingsContent showSyncOptions />
                     </CardContent>
                 </Card>
             </div>

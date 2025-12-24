@@ -1,17 +1,33 @@
 
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useLibrary } from "@/hooks/use-library";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase";
 
-export function SettingsContent() {
-    const { library, restoreLibrary } = useLibrary();
+const LAST_CHECK_KEY = 'mangatrack-last-check';
+
+interface SettingsContentProps {
+    showSyncOptions?: boolean;
+}
+
+export function SettingsContent({ showSyncOptions = false }: SettingsContentProps) {
+    const { library, restoreLibrary, triggerUpdateCheck } = useLibrary();
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { user } = useUser();
+    const [lastCheck, setLastCheck] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (showSyncOptions) {
+            const savedDate = localStorage.getItem(LAST_CHECK_KEY);
+            if (savedDate) {
+                setLastCheck(new Date(savedDate).toLocaleString('pt-BR'));
+            }
+        }
+    }, [showSyncOptions]);
 
 
     const handleBackup = () => {
@@ -96,6 +112,31 @@ export function SettingsContent() {
         // Limpa o input para permitir o re-upload do mesmo arquivo
         event.target.value = '';
     };
+
+    const handleForceCheck = () => {
+        if (!user || user.isAnonymous) {
+            toast({ title: "Aviso", description: "A verificação automática só funciona para contas logadas." });
+            return;
+        }
+        triggerUpdateCheck();
+        const now = new Date();
+        localStorage.setItem(LAST_CHECK_KEY, now.toISOString());
+        setLastCheck(now.toLocaleString('pt-BR'));
+        toast({ title: "Verificação Iniciada", description: "A busca por novos capítulos para toda a biblioteca começou em segundo plano." });
+    }
+
+    if (showSyncOptions) {
+        return (
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                <Button onClick={handleForceCheck} disabled={!user || user.isAnonymous}>Forçar Verificação</Button>
+                {lastCheck && (
+                    <p className="text-sm text-muted-foreground mt-2 sm:mt-0">
+                        Última verificação: {lastCheck}
+                    </p>
+                )}
+            </div>
+        )
+    }
 
     return (
         <div className="flex gap-4">
