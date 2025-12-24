@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -180,19 +181,20 @@ export default function SearchPage() {
       const searchMangaDex = async () => {
         try {
           const baseUrl = 'https://api.mangadex.org';
-          const params = new URLSearchParams({
-            title: debouncedSearchTerm.trim(),
-            limit: '20',
-            order: '{"relevance":"desc"}',
-            'includes[]': 'cover_art'
-          });
-          const response = await fetch(`${baseUrl}/manga?${params.toString()}`);
-           if (!response.ok) {
+          const encodedTitle = encodeURIComponent(debouncedSearchTerm.trim());
+          // Construir a URL manualmente para evitar problemas de codificação com URLSearchParams
+          const url = `${baseUrl}/manga?title=${encodedTitle}&limit=20&includes[]=cover_art&order[relevance]=desc`;
+          
+          const response = await fetch(url);
+      
+          if (!response.ok) {
             throw new Error(`Status: ${response.status}`);
           }
       
           const result = await response.json();
-          if (result.result !== 'ok' || !Array.isArray(result.data)) return [];
+          if (result.result !== 'ok' || !Array.isArray(result.data)) {
+            return [];
+          }
       
           const mangaList = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
           
