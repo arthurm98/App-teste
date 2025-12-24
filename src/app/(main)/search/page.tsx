@@ -182,7 +182,7 @@ export default function SearchPage() {
         try {
           const baseUrl = 'https://api.mangadex.org';
           const encodedTitle = encodeURIComponent(debouncedSearchTerm.trim());
-          // Construir a URL manualmente para evitar problemas de codificação com URLSearchParams
+          // Construir a URL manualmente para garantir a formatação correta dos parâmetros de array
           const url = `${baseUrl}/manga?title=${encodedTitle}&limit=40&includes[]=cover_art&order[relevance]=desc`;
           
           const response = await fetch(url);
