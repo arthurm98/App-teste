@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Search, Library, Settings, LogIn } from "lucide-react";
+import { BarChart3, Search, Library, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
@@ -14,7 +14,6 @@ import {
   SidebarMenuButton,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { useUser } from "@/firebase";
 
 const menuItems = [
   { href: "/", label: "Biblioteca", icon: Library },
@@ -62,10 +61,7 @@ export function BottomBar() {
 
     return (
         <div className="md:hidden fixed bottom-0 left-0 z-50 w-full h-16 bg-background border-t border-border">
-            <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
-                <div className="flex items-center justify-center">
-                   <SidebarTrigger />
-                </div>
+            <div className="grid h-full max-w-lg grid-cols-4 mx-auto font-medium">
                 {menuItems.map((item) => {
                     const isActive = pathname === item.href;
                     return (

@@ -37,7 +37,7 @@ function UserNav() {
   // O usuário anônimo tem um botão de login para converter a conta.
   if (!user || user.isAnonymous) {
     return (
-       <Button variant="ghost" onClick={handleLoginRedirect}>
+       <Button variant="outline" size="sm" onClick={handleLoginRedirect}>
          <LogIn className="mr-2 h-4 w-4" />
          Login
       </Button>
@@ -79,9 +79,9 @@ function UserNav() {
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6 lg:justify-end">
+    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6 lg:justify-end lg:px-8">
         <div className="md:hidden">
-             <SidebarTrigger />
+             {/* O SidebarTrigger pode ser re-adicionado aqui se necessário no futuro */}
         </div>
         <div className="flex flex-1 items-center justify-end gap-4">
             <ThemeToggle />
