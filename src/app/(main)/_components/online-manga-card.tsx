@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -63,11 +64,12 @@ export function OnlineMangaCard({ manga }: OnlineMangaCardProps) {
             {manga.score && (
                 <span>Nota: {manga.score.toFixed(2)}</span>
             )}
-            {manga.score && manga.chapters ? ' • ' : ''}
-            {manga.chapters && (
+            {manga.score && (manga.chapters || manga.status) ? ' • ' : ''}
+            {manga.chapters && manga.chapters > 0 ? (
                 <span>{manga.chapters} caps</span>
+            ) : (
+                manga.status && <span>{manga.status}</span>
             )}
-            {(!manga.score && !manga.chapters) && <span>&nbsp;</span>}
            </div>
            <Button 
              variant={isInLibrary ? "secondary" : "default"} 
