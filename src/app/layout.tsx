@@ -7,10 +7,42 @@ import { poppins } from './fonts';
 import { cn } from '@/lib/utils';
 import { FirebaseClientProvider } from '@/firebase';
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mangatrack.vercel.app';
+
 export const metadata: Metadata = {
-  title: 'MangaTrack',
-  description: 'Organize e acompanhe seus mangás, manhwas e webtoons.',
+  metadataBase: new URL(APP_URL),
+  title: {
+    default: 'MangaTrack',
+    template: `%s | MangaTrack`,
+  },
+  description: 'Organize e acompanhe seus mangás, manhwas e webtoons em um só lugar. Nunca mais perca o fio da meada.',
   manifest: '/manifest.json',
+  applicationName: 'MangaTrack',
+  keywords: ['manga', 'manhwa', 'webtoon', 'organizador', 'tracker', 'leitor', 'biblioteca'],
+  authors: [{ name: 'ArthurM', url: 'https://github.com/ArthurMaverick' }],
+  creator: 'ArthurM',
+  publisher: 'Firebase Studio',
+  openGraph: {
+    type: 'website',
+    url: APP_URL,
+    title: 'MangaTrack',
+    description: 'Organize e acompanhe seus mangás, manhwas e webtoons em um só lugar.',
+    siteName: 'MangaTrack',
+    images: [
+      {
+        url: `${APP_URL}/og-image.png`,
+        width: 1200,
+        height: 630,
+        alt: 'Logo do MangaTrack em um fundo roxo.',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MangaTrack',
+    description: 'Organize e acompanhe seus mangás, manhwas e webtoons em um só lugar.',
+    images: [`${APP_URL}/og-image.png`],
+  },
 };
 
 export default function RootLayout({

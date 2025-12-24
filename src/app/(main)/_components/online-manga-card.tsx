@@ -46,7 +46,6 @@ export function OnlineMangaCard({ manga }: OnlineMangaCardProps) {
             height={600}
             className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105 aspect-[2/3]"
             onError={() => setIsImageError(true)}
-            priority
           />
         ) : (
           <div className="w-full aspect-[2/3] bg-muted flex items-center justify-center p-4">

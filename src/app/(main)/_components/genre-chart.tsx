@@ -65,6 +65,7 @@ export function GenreChart() {
           tickLine={false}
           tickMargin={10}
           axisLine={false}
+          tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
           tickFormatter={(value) => value}
           className="text-xs truncate"
           width={80}
