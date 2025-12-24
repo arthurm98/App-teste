@@ -2,29 +2,12 @@
 import { JikanManga } from "@/lib/jikan-data";
 import { KitsuManga } from "@/lib/kitsu-data";
 import { AniListManga } from "@/lib/anilist-data";
-import { getLatestChapter } from "@/ai/flows/get-latest-chapter-flow";
+
 
 interface MangaUpdateInfo {
     totalChapters: number | null;
     latestChapter: number | null;
 }
-
-// AI-powered function to get the latest chapter
-async function getInfoFromAI(title: string): Promise<MangaUpdateInfo | null> {
-    try {
-        console.log(`[AI] Searching for latest chapter of "${title}"...`);
-        const result = await getLatestChapter({ mangaTitle: title });
-        if (result && result.latestChapter) {
-            console.log(`[AI] Found latest chapter for "${title}": ${result.latestChapter}`);
-            return { totalChapters: result.latestChapter, latestChapter: result.latestChapter };
-        }
-        console.log(`[AI] No chapter info found for "${title}".`);
-    } catch (error) {
-        console.error(`[AI] Request failed for title ${title}:`, error);
-    }
-    return null;
-}
-
 
 // Busca as informações mais recentes de um mangá na API Jikan (MyAnimeList)
 async function getInfoFromJikan(mangaId: string, title?: string): Promise<MangaUpdateInfo | null> {
@@ -103,15 +86,8 @@ async function getInfoFromAniList(title: string): Promise<MangaUpdateInfo | null
 // Função principal que tenta buscar em várias APIs em cascata.
 export async function getLatestMangaInfo(mangaId: string, title: string): Promise<MangaUpdateInfo | null> {
     
-    // 1. Tentar a busca com IA primeiro, pois é a mais robusta.
-    const aiResult = await getInfoFromAI(title);
-    if (aiResult && (aiResult.latestChapter || aiResult.totalChapters)) {
-        return aiResult;
-    }
+    console.log("Searching for manga updates using traditional APIs...");
 
-    console.log("AI search failed, falling back to traditional APIs...");
-
-    // 2. Fallback para as APIs tradicionais
     const fallbackSearchers = [
         () => getInfoFromJikan('', title),
         () => getInfoFromKitsu(title),
