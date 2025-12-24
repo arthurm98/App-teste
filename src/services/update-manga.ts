@@ -1,18 +1,26 @@
 
 import { JikanManga } from "@/lib/jikan-data";
-import { MangaDexManga, Relationship } from "@/lib/mangadex-data";
+import { MangaDexManga } from "@/lib/mangadex-data";
+import { KitsuManga } from "@/lib/kitsu-data";
+import { AniListManga } from "@/lib/anilist-data";
 
 interface MangaUpdateInfo {
     totalChapters: number;
 }
 
 // Busca as informações mais recentes de um mangá na API Jikan (MyAnimeList)
-async function getInfoFromJikan(mangaId: string): Promise<MangaUpdateInfo | null> {
+async function getInfoFromJikan(mangaId: string, title?: string): Promise<MangaUpdateInfo | null> {
     try {
-        const response = await fetch(`https://api.jikan.moe/v4/manga/${mangaId}`);
+        const url = mangaId 
+            ? `https://api.jikan.moe/v4/manga/${mangaId}` 
+            : `https://api.jikan.moe/v4/manga?q=${encodeURIComponent(title || '')}&limit=1`;
+
+        const response = await fetch(url);
         if (!response.ok) return null;
+
         const data = await response.json();
-        const manga: JikanManga = data.data;
+        const manga: JikanManga = mangaId ? data.data : (data.data || [])[0];
+
         if (manga && manga.chapters) {
             return { totalChapters: manga.chapters };
         }
@@ -23,39 +31,117 @@ async function getInfoFromJikan(mangaId: string): Promise<MangaUpdateInfo | null
 }
 
 // Busca as informações mais recentes de um mangá na API MangaDex
-async function getInfoFromMangaDex(mangaId: string): Promise<MangaUpdateInfo | null> {
+async function getInfoFromMangaDex(mangaId: string, title?: string): Promise<MangaUpdateInfo | null> {
     try {
-        const response = await fetch(`https://api.mangadex.org/manga/${mangaId}`);
+        const url = mangaId.startsWith('md-')
+          ? `https://api.mangadex.org/manga/${mangaId.substring(3)}`
+          : `https://api.mangadex.org/manga?title=${encodeURIComponent(title || '')}&limit=1&order[relevance]=desc`;
+        
+        const response = await fetch(url);
         if (!response.ok) return null;
+
         const data = await response.json();
-        const manga: MangaDexManga = data.data;
+        const manga: MangaDexManga = mangaId.startsWith('md-') ? data.data : (data.data || [])[0];
+        
         if (manga && manga.attributes.lastChapter) {
-            return { totalChapters: parseFloat(manga.attributes.lastChapter) };
+            const chapterNumber = parseFloat(manga.attributes.lastChapter);
+            if (!isNaN(chapterNumber)) {
+                return { totalChapters: chapterNumber };
+            }
         }
     } catch (error) {
-        console.error(`MangaDex API request failed for mangaId ${mangaId}:`, error);
+        console.error(`MangaDex API request failed for mangaId ${mangaId} or title ${title}:`, error);
+    }
+    return null;
+}
+
+// Busca as informações mais recentes na API Kitsu
+async function getInfoFromKitsu(title: string): Promise<MangaUpdateInfo | null> {
+    try {
+        const response = await fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(title)}&page[limit]=1`);
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        const manga: KitsuManga = (data.data || [])[0];
+        
+        if (manga && manga.attributes.chapterCount) {
+            return { totalChapters: manga.attributes.chapterCount };
+        }
+    } catch (error) {
+        console.error(`Kitsu API request failed for title ${title}:`, error);
+    }
+    return null;
+}
+
+// Busca as informações mais recentes na API AniList
+async function getInfoFromAniList(title: string): Promise<MangaUpdateInfo | null> {
+     const query = `
+      query ($search: String) {
+        Media(search: $search, type: MANGA, sort: [SEARCH_MATCH]) {
+          chapters
+        }
+      }
+    `;
+    const variables = { search: title };
+
+    try {
+        const response = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ query, variables }),
+        });
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        const manga: AniListManga = data.data?.Media;
+
+        if (manga && manga.chapters) {
+            return { totalChapters: manga.chapters };
+        }
+    } catch (error) {
+        console.error(`AniList API request failed for title ${title}:`, error);
     }
     return null;
 }
 
 
+// Função principal que tenta buscar em várias APIs em cascata.
 export async function getLatestMangaInfo(mangaId: string, title: string): Promise<MangaUpdateInfo | null> {
-    // Se o ID indica que é do MangaDex
+    
+    // Array de funções de busca para usar como fallback
+    const fallbackSearchers = [
+        () => getInfoFromJikan('', title),
+        () => getInfoFromMangaDex('', title),
+        () => getInfoFromKitsu(title),
+        () => getInfoFromAniList(title),
+    ];
+
+    // Tenta a fonte primária primeiro, se aplicável
     if (mangaId.startsWith('md-')) {
-        // O ID do MangaDex está no formato 'md-xxxxxxxx-xxxx...'
-        // Precisamos extrair o UUID real.
-        const dexId = mangaId.substring(3); // Remove o prefixo 'md-'
-        const dexInfo = await getInfoFromMangaDex(dexId);
-        if (dexInfo) return dexInfo;
-    } else { // Se o ID for numérico, provavelmente é do MyAnimeList (Jikan)
-        const jikanInfo = await getInfoFromJikan(mangaId);
-        if (jikanInfo) return jikanInfo;
+        const primaryInfo = await getInfoFromMangaDex(mangaId);
+        if (primaryInfo) return primaryInfo;
+    } else if (!isNaN(Number(mangaId))) { // Jikan ou AniList ID
+        const primaryInfo = await getInfoFromJikan(mangaId);
+        if (primaryInfo) return primaryInfo;
+    }
+    
+    // Se a fonte primária falhar ou não for aplicável, itera sobre os fallbacks
+    for (const searcher of fallbackSearchers) {
+        try {
+            const result = await searcher();
+            if (result) {
+                console.log(`Fallback successful for "${title}" using ${searcher.name}`);
+                return result;
+            }
+        } catch (error) {
+            // Apenas loga o erro e continua para a próxima API
+            console.warn(`A fallback searcher failed for "${title}"`, error);
+        }
     }
 
-    // Como fallback, se a primeira tentativa falhar, podemos tentar buscar pelo título em outras APIs
-    // Esta parte pode ser expandida no futuro
-    console.log(`Fallback: Could not update ${title} with its primary ID. Further search can be implemented.`);
+    console.log(`All update checks failed for "${title}".`);
     return null;
 }
-
-    

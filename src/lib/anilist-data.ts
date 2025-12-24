@@ -1,3 +1,4 @@
+
 // A type definition based on the AniList GraphQL API
 // https://anilist.github.io/ApiV2-GraphQL-Docs/
 
@@ -15,7 +16,7 @@ export type AniListManga = {
     };
     format: 'MANGA' | 'NOVEL' | 'ONE_SHOT';
     status: 'FINISHED' | 'RELEASING' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS';
-    description: string;
+    description?: string;
     chapters: number | null;
     averageScore: number | null; // 0-100
     genres: string[];
