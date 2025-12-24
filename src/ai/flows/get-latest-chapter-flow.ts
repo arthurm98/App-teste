@@ -10,7 +10,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { webSearch } from 'genkit/tools';
+import { webSearch } from '@genkit-ai/google-genai';
 
 const GetLatestChapterInputSchema = z.object({
   mangaTitle: z.string().describe('The title of the manga to search for.'),
@@ -23,22 +23,6 @@ const GetLatestChapterOutputSchema = z.object({
 export type GetLatestChapterOutput = z.infer<typeof GetLatestChapterOutputSchema>;
 
 
-const searchTool = ai.defineTool(
-    {
-        name: 'webSearch',
-        description: 'Searches the web for a given query and returns the top results.',
-        inputSchema: z.object({ query: z.string() }),
-        outputSchema: z.any(),
-    },
-    async ({ query }) => {
-        const searchResults = await webSearch(query, {
-            engine: 'google'
-        });
-        return searchResults;
-    }
-);
-
-
 export async function getLatestChapter(input: GetLatestChapterInput): Promise<GetLatestChapterOutput> {
   return getLatestChapterFlow(input);
 }
@@ -47,7 +31,7 @@ const prompt = ai.definePrompt({
   name: 'getLatestChapterPrompt',
   inputSchema: GetLatestChapterInputSchema,
   outputSchema: GetLatestChapterOutputSchema,
-  tools: [searchTool],
+  tools: [webSearch],
   prompt: `You are an expert at finding information about manga. Your task is to find the latest released chapter for a given manga title.
 
   Use the web search tool to find the most recent chapter number for the manga: "{{mangaTitle}}". 
