@@ -24,7 +24,7 @@ interface LibraryContextType {
 
 export const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
 
-const generateMangaDexId = (title: string) => `md-${title.toLowerCase().replace(/\s+/g, '-')}`;
+const generateFallbackId = (title: string) => `fb-${title.toLowerCase().replace(/\s+/g, '-')}`;
 const LOCAL_STORAGE_KEY = 'mangatrack-library';
 const UPDATE_INTERVAL_DAYS = 7;
 
@@ -182,7 +182,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
 
   const isMangaInLibrary = useCallback((mangaId: number, title?: string) => {
-    const checkId = mangaId > 0 ? String(mangaId) : generateMangaDexId(title || '');
+    const checkId = mangaId > 0 ? String(mangaId) : generateFallbackId(title || '');
     return library.some(m => m.id === checkId);
   }, [library]);
 
@@ -192,7 +192,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       return;
     }
     
-    const mangaId = manga.mal_id > 0 ? String(manga.mal_id) : generateMangaDexId(manga.title);
+    const mangaId = manga.mal_id > 0 ? String(manga.mal_id) : generateFallbackId(manga.title);
     const now = Timestamp.now();
     const newManga: Manga = {
       id: mangaId,

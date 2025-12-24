@@ -22,7 +22,7 @@ interface OnlineMangaCardProps {
 export function OnlineMangaCard({ manga }: OnlineMangaCardProps) {
   const { addToLibrary, isMangaInLibrary } = useLibrary();
   const [isImageError, setIsImageError] = useState(false);
-  // A busca por ID do Jikan é mais confiável. Se não houver, verificamos por título (fallback para MangaDex)
+  // A busca por ID do Jikan/Anilist é mais confiável. Se não houver, verificamos por título (fallback para Kitsu)
   const isInLibrary = manga.mal_id ? isMangaInLibrary(manga.mal_id) : isMangaInLibrary(0, manga.title);
 
 

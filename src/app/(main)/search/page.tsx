@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Search as SearchIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { JikanManga } from "@/lib/jikan-data";
-import type { MangaDexManga, Relationship, MangaDexChapterFeed } from "@/lib/mangadex-data";
 import type { KitsuManga } from "@/lib/kitsu-data";
 import type { AniListManga } from "@/lib/anilist-data";
 import { OnlineMangaCard } from "../_components/online-manga-card";
@@ -20,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { MangaType } from "@/lib/data";
 
-type ApiSource = "Auto" | "Jikan" | "MangaDex" | "Kitsu" | "AniList";
+type ApiSource = "Auto" | "Jikan" | "Kitsu" | "AniList";
 
 const CACHE_PREFIX = "mangatrack_search_";
 
@@ -32,35 +31,6 @@ function normalizeMangaType(type: string | null): MangaType {
     if (lowerType.includes('novel')) return 'Novel';
     if (lowerType.includes('oel') || lowerType.includes('doujinshi')) return 'Mangá';
     return 'Outro';
-}
-
-function adaptMangaDexToJikan(manga: MangaDexManga, coverUrl: string): JikanManga {
-  const titleObj = manga.attributes.title;
-  const mainTitle = titleObj.en || Object.values(titleObj).find(t => !!t) || "Untitled";
-
-  const descriptionObj = manga.attributes.description;
-  const synopsis = descriptionObj.en || Object.values(descriptionObj).find(d => !!d) || null;
-
-  return {
-    mal_id: 0, // MangaDex não fornece mal_id diretamente
-    url: `https://mangadex.org/title/${manga.id}`,
-    images: {
-      jpg: { image_url: coverUrl, small_image_url: coverUrl, large_image_url: coverUrl },
-      webp: { image_url: coverUrl, small_image_url: coverUrl, large_image_url: coverUrl },
-    },
-    title: mainTitle,
-    type: normalizeMangaType(manga.attributes.publicationDemographic || manga.type),
-    chapters: manga.attributes.lastChapter ? parseFloat(manga.attributes.lastChapter) : null,
-    status: manga.attributes.status,
-    score: null, 
-    synopsis: synopsis,
-    genres: manga.attributes.tags.filter(tag => tag.attributes.group === 'genre').map(tag => ({
-      mal_id: 0,
-      type: "manga",
-      name: tag.attributes.name.en,
-      url: ""
-    })),
-  };
 }
 
 function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
@@ -174,39 +144,6 @@ export default function SearchPage() {
         return [];
       };
 
-      const searchMangaDex = async () => {
-        try {
-          const baseUrl = 'https://api.mangadex.org';
-          // Em vez de buscar o título, buscamos o "feed" de capítulos para pegar mangás populares/recentes
-          // e depois filtramos pelo título. É uma abordagem indireta, mas mais confiável.
-          const feedUrl = `${baseUrl}/manga?limit=100&order[latestUploadedChapter]=desc&includes[]=cover_art`;
-          const response = await fetch(feedUrl);
-      
-          if (!response.ok) throw new Error(`Status: ${response.status}`);
-          
-          const result = await response.json();
-          if (result.result !== 'ok' || !Array.isArray(result.data)) return [];
-          
-          const mangaList: MangaDexManga[] = result.data.filter((item: any): item is MangaDexManga => {
-              if (item.type !== 'manga') return false;
-              const titleObj = item.attributes.title;
-              const lowerSearch = debouncedSearchTerm.trim().toLowerCase();
-              return Object.values(titleObj).some(title => (title as string)?.toLowerCase().includes(lowerSearch));
-          });
-          
-          return mangaList.map((manga: MangaDexManga) => {
-            const coverRel = manga.relationships.find((rel: Relationship) => rel.type === 'cover_art');
-            const coverFileName = coverRel?.attributes?.fileName; 
-            const coverUrl = (coverFileName && manga.id) ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : "";
-            return adaptMangaDexToJikan(manga, coverUrl);
-          });
-        } catch (error) {
-          console.warn("MangaDex API request failed:", error);
-          failedApis.push("MangaDex");
-        }
-        return [];
-      };
-
       const searchKitsu = async () => {
         try {
           const kitsuResponse = await fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(debouncedSearchTerm.trim())}`);
@@ -283,8 +220,6 @@ export default function SearchPage() {
       
       if (apiSource === "Jikan") {
         results = await searchJikan();
-      } else if (apiSource === "MangaDex") {
-        results = await searchMangaDex();
       } else if (apiSource === "Kitsu") {
         results = await searchKitsu();
       } else if (apiSource === "AniList") {
@@ -292,7 +227,6 @@ export default function SearchPage() {
       } else { // Auto - Busca em paralelo e agrega os resultados
         const allSearches = await Promise.allSettled([
             searchJikan(),
-            searchMangaDex(),
             searchKitsu(),
             searchAniList(),
         ]);
@@ -373,7 +307,6 @@ export default function SearchPage() {
             <SelectContent>
               <SelectItem value="Auto">Automático</SelectItem>
               <SelectItem value="Jikan">Jikan (MAL)</SelectItem>
-              <SelectItem value="MangaDex">MangaDex</SelectItem>
               <SelectItem value="Kitsu">Kitsu</SelectItem>
               <SelectItem value="AniList">AniList</SelectItem>
             </SelectContent>

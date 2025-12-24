@@ -1,6 +1,5 @@
 
 import { JikanManga } from "@/lib/jikan-data";
-import { MangaDexManga } from "@/lib/mangadex-data";
 import { KitsuManga } from "@/lib/kitsu-data";
 import { AniListManga } from "@/lib/anilist-data";
 
@@ -26,31 +25,6 @@ async function getInfoFromJikan(mangaId: string, title?: string): Promise<MangaU
         }
     } catch (error) {
         console.error(`Jikan API request failed for mangaId ${mangaId}:`, error);
-    }
-    return null;
-}
-
-// Busca as informações mais recentes de um mangá na API MangaDex
-async function getInfoFromMangaDex(mangaId: string, title?: string): Promise<MangaUpdateInfo | null> {
-    try {
-        const url = mangaId.startsWith('md-')
-          ? `https://api.mangadex.org/manga/${mangaId.substring(3)}`
-          : `https://api.mangadex.org/manga?title=${encodeURIComponent(title || '')}&limit=1&order[relevance]=desc`;
-        
-        const response = await fetch(url);
-        if (!response.ok) return null;
-
-        const data = await response.json();
-        const manga: MangaDexManga = mangaId.startsWith('md-') ? data.data : (data.data || [])[0];
-        
-        if (manga && manga.attributes.lastChapter) {
-            const chapterNumber = parseFloat(manga.attributes.lastChapter);
-            if (!isNaN(chapterNumber)) {
-                return { totalChapters: chapterNumber };
-            }
-        }
-    } catch (error) {
-        console.error(`MangaDex API request failed for mangaId ${mangaId} or title ${title}:`, error);
     }
     return null;
 }
@@ -114,16 +88,12 @@ export async function getLatestMangaInfo(mangaId: string, title: string): Promis
     // Array de funções de busca para usar como fallback
     const fallbackSearchers = [
         () => getInfoFromJikan('', title),
-        () => getInfoFromMangaDex('', title),
         () => getInfoFromKitsu(title),
         () => getInfoFromAniList(title),
     ];
 
-    // Tenta a fonte primária primeiro, se aplicável
-    if (mangaId.startsWith('md-')) {
-        const primaryInfo = await getInfoFromMangaDex(mangaId);
-        if (primaryInfo) return primaryInfo;
-    } else if (!isNaN(Number(mangaId))) { // Jikan ou AniList ID
+    // Tenta a fonte primária primeiro, se aplicável (Jikan/Anilist ID)
+    if (!isNaN(Number(mangaId))) {
         const primaryInfo = await getInfoFromJikan(mangaId);
         if (primaryInfo) return primaryInfo;
     }
