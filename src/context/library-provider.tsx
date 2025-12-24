@@ -86,18 +86,34 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
             // Inicia verificação de atualização semanal
             const updatedAt = (mangaData.updatedAt as Timestamp) || mangaData.createdAt;
-            if (updatedAt) {
+            if (updatedAt && mangaData.status !== 'Completo') {
                 const diffDays = (now.seconds - updatedAt.seconds) / (60 * 60 * 24);
                 if (diffDays > UPDATE_INTERVAL_DAYS) {
                     console.log(`Verificando atualizações para "${mangaData.title}"...`);
                     getLatestMangaInfo(mangaData.id, mangaData.title).then(latestInfo => {
-                        if (latestInfo && latestInfo.totalChapters > mangaData.totalChapters) {
-                            console.log(`"${mangaData.title}" atualizado para ${latestInfo.totalChapters} capítulos.`);
-                            updateLibraryItem(mangaData.id, { totalChapters: latestInfo.totalChapters });
-                             toast({
-                                title: "Capítulos Atualizados",
-                                description: `Novos capítulos disponíveis para "${mangaData.title}".`,
-                            });
+                        if (latestInfo) {
+                            const currentLatest = mangaData.latestChapter || mangaData.readChapters;
+                            let hasUpdate = false;
+                            const updates: Partial<Manga> = {};
+
+                            if (latestInfo.latestChapter && latestInfo.latestChapter > currentLatest) {
+                                console.log(`"${mangaData.title}" tem um novo capítulo: ${latestInfo.latestChapter}.`);
+                                updates.totalChapters = Math.max(mangaData.totalChapters || 0, latestInfo.latestChapter);
+                                updates.latestChapter = latestInfo.latestChapter;
+                                hasUpdate = true;
+                            } else if (latestInfo.totalChapters && latestInfo.totalChapters > mangaData.totalChapters) {
+                                console.log(`"${mangaData.title}" atualizado para ${latestInfo.totalChapters} capítulos.`);
+                                updates.totalChapters = latestInfo.totalChapters;
+                                hasUpdate = true;
+                            }
+                            
+                            if (hasUpdate) {
+                                updateLibraryItem(mangaData.id, updates);
+                                toast({
+                                    title: "Novos Capítulos Lançados",
+                                    description: `Novos capítulos disponíveis para "${mangaData.title}".`,
+                                });
+                            }
                         }
                     });
                 }
@@ -202,6 +218,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       imageUrl: manga.images.webp.large_image_url || manga.images.webp.image_url,
       totalChapters: manga.chapters || 0,
       readChapters: 0,
+      latestChapter: manga.chapters || 0,
       genres: manga.genres.map(g => g.name),
       createdAt: now,
       updatedAt: now,
@@ -302,5 +319,3 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     </LibraryContext.Provider>
   );
 }
-
-    

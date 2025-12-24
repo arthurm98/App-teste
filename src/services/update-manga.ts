@@ -2,9 +2,11 @@
 import { JikanManga } from "@/lib/jikan-data";
 import { KitsuManga } from "@/lib/kitsu-data";
 import { AniListManga } from "@/lib/anilist-data";
+import { MangaUpdatesManga } from "@/lib/mangaupdates-data";
 
 interface MangaUpdateInfo {
-    totalChapters: number;
+    totalChapters: number | null;
+    latestChapter: number | null;
 }
 
 // Busca as informações mais recentes de um mangá na API Jikan (MyAnimeList)
@@ -20,8 +22,8 @@ async function getInfoFromJikan(mangaId: string, title?: string): Promise<MangaU
         const data = await response.json();
         const manga: JikanManga = mangaId ? data.data : (data.data || [])[0];
 
-        if (manga && manga.chapters) {
-            return { totalChapters: manga.chapters };
+        if (manga) {
+            return { totalChapters: manga.chapters, latestChapter: manga.chapters };
         }
     } catch (error) {
         console.error(`Jikan API request failed for mangaId ${mangaId}:`, error);
@@ -38,8 +40,8 @@ async function getInfoFromKitsu(title: string): Promise<MangaUpdateInfo | null> 
         const data = await response.json();
         const manga: KitsuManga = (data.data || [])[0];
         
-        if (manga && manga.attributes.chapterCount) {
-            return { totalChapters: manga.attributes.chapterCount };
+        if (manga) {
+            return { totalChapters: manga.attributes.chapterCount, latestChapter: manga.attributes.chapterCount };
         }
     } catch (error) {
         console.error(`Kitsu API request failed for title ${title}:`, error);
@@ -72,11 +74,33 @@ async function getInfoFromAniList(title: string): Promise<MangaUpdateInfo | null
         const data = await response.json();
         const manga: AniListManga = data.data?.Media;
 
-        if (manga && manga.chapters) {
-            return { totalChapters: manga.chapters };
+        if (manga) {
+            return { totalChapters: manga.chapters, latestChapter: manga.chapters };
         }
     } catch (error) {
         console.error(`AniList API request failed for title ${title}:`, error);
+    }
+    return null;
+}
+
+// Busca as informações mais recentes na API MangaUpdates
+async function getInfoFromMangaUpdates(title: string): Promise<MangaUpdateInfo | null> {
+    try {
+        const searchResponse = await fetch('https://api.mangaupdates.com/v1/series/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ search: title, perpage: 1 })
+        });
+        if (!searchResponse.ok) return null;
+
+        const searchData = await searchResponse.json();
+        const manga: MangaUpdatesManga = (searchData.results || [])[0]?.record;
+
+        if (manga) {
+            return { totalChapters: manga.latest_chapter, latestChapter: manga.latest_chapter };
+        }
+    } catch (error) {
+        console.error(`MangaUpdates API request failed for title ${title}:`, error);
     }
     return null;
 }
@@ -87,12 +111,13 @@ export async function getLatestMangaInfo(mangaId: string, title: string): Promis
     
     // Array de funções de busca para usar como fallback
     const fallbackSearchers = [
+        () => getInfoFromMangaUpdates(title), // Prioridade para quem tem "latest_chapter"
         () => getInfoFromJikan('', title),
         () => getInfoFromKitsu(title),
         () => getInfoFromAniList(title),
     ];
 
-    // Tenta a fonte primária primeiro, se aplicável (Jikan/Anilist ID)
+    // Tenta a fonte primária primeiro (Jikan/Anilist ID se for um número)
     if (!isNaN(Number(mangaId))) {
         const primaryInfo = await getInfoFromJikan(mangaId);
         if (primaryInfo) return primaryInfo;
@@ -102,8 +127,8 @@ export async function getLatestMangaInfo(mangaId: string, title: string): Promis
     for (const searcher of fallbackSearchers) {
         try {
             const result = await searcher();
-            if (result) {
-                console.log(`Fallback successful for "${title}" using ${searcher.name}`);
+            if (result && (result.totalChapters || result.latestChapter)) {
+                console.log(`Fallback successful for "${title}"`);
                 return result;
             }
         } catch (error) {

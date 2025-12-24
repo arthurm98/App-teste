@@ -11,6 +11,7 @@ export type Manga = {
   status: MangaStatus;
   totalChapters: number;
   readChapters: number;
+  latestChapter: number; // Novo campo para rastrear o último capítulo conhecido
   genres: string[];
   imageUrl?: string;
   createdAt: Timestamp;
@@ -19,5 +20,3 @@ export type Manga = {
 
 // A biblioteca inicial foi removida. Os dados serão carregados da nuvem ou do localStorage.
 export const mangaLibrary: Manga[] = [];
-
-    
