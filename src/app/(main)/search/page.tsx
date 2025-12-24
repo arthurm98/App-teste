@@ -9,7 +9,6 @@ import type { JikanManga } from "@/lib/jikan-data";
 import type { MangaDexManga, Relationship } from "@/lib/mangadex-data";
 import type { KitsuManga } from "@/lib/kitsu-data";
 import type { AniListManga } from "@/lib/anilist-data";
-import type { MangaUpdatesManga } from "@/lib/mangaupdates-data";
 import { OnlineMangaCard } from "../_components/online-manga-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -21,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { MangaType } from "@/lib/data";
 
-type ApiSource = "Auto" | "Jikan" | "MangaDex" | "Kitsu" | "AniList" | "MangaUpdates";
+type ApiSource = "Auto" | "Jikan" | "MangaDex" | "Kitsu" | "AniList";
 
 const CACHE_PREFIX = "mangatrack_search_";
 
@@ -113,26 +112,6 @@ function adaptAniListToJikan(manga: AniListManga): JikanManga {
     };
 }
 
-// Função para adaptar os dados da MangaUpdates para o formato JikanManga
-function adaptMangaUpdatesToJikan(manga: MangaUpdatesManga): JikanManga {
-    const imageUrl = manga.image?.url?.original || "";
-    return {
-        mal_id: manga.series_id,
-        url: manga.url,
-        images: {
-            jpg: { image_url: imageUrl, small_image_url: imageUrl, large_image_url: imageUrl },
-            webp: { image_url: imageUrl, small_image_url: imageUrl, large_image_url: imageUrl },
-        },
-        title: manga.title,
-        type: normalizeMangaType(manga.type),
-        chapters: manga.latest_chapter,
-        status: 'unknown', // API não fornece status de publicação
-        score: manga.bayesian_rating, // MangaUpdates usa um sistema de rating bayesiano de 1 a 10
-        synopsis: manga.description,
-        genres: manga.genres.map(g => ({ mal_id: g.genre_id, type: 'manga', name: g.genre, url: '' })),
-    };
-}
-
 
 export default function SearchPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -204,7 +183,7 @@ export default function SearchPage() {
           const baseUrl = 'https://api.mangadex.org';
           const encodedTitle = encodeURIComponent(debouncedSearchTerm.trim());
           // Construir a URL manualmente para evitar problemas de codificação com URLSearchParams
-          const url = `${baseUrl}/manga?title=${encodedTitle}&limit=20&includes[]=cover_art&order[relevance]=desc`;
+          const url = `${baseUrl}/manga?title=${encodedTitle}&limit=40&includes[]=cover_art&order[relevance]=desc`;
           
           const response = await fetch(url);
       
@@ -306,30 +285,6 @@ export default function SearchPage() {
         return [];
       };
       
-      const searchMangaUpdates = async () => {
-        try {
-            const response = await fetch('https://api.mangaupdates.com/v1/series/search', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    search: debouncedSearchTerm.trim(),
-                    perpage: 20,
-                }),
-            });
-            if (response.ok) {
-                const data = await response.json();
-                const mangaUpdatesResults = (data.results || []).map((r: any) => r.record) as MangaUpdatesManga[];
-                return mangaUpdatesResults.map(adaptMangaUpdatesToJikan);
-            }
-            throw new Error(`Status: ${response.status}`);
-        } catch (error) {
-            console.warn("MangaUpdates API request failed:", error);
-            failedApis.push("MangaUpdates");
-        }
-        return [];
-      };
 
       if (apiSource === "Jikan") {
         results = await searchJikan();
@@ -339,15 +294,12 @@ export default function SearchPage() {
         results = await searchKitsu();
       } else if (apiSource === "AniList") {
         results = await searchAniList();
-      } else if (apiSource === "MangaUpdates") {
-        results = await searchMangaUpdates();
       } else { // Auto - Busca em paralelo e agrega os resultados
         const allSearches = await Promise.allSettled([
             searchJikan(),
             searchMangaDex(),
             searchKitsu(),
             searchAniList(),
-            searchMangaUpdates(),
         ]);
 
         let combinedResults: JikanManga[] = [];
@@ -429,7 +381,6 @@ export default function SearchPage() {
               <SelectItem value="MangaDex">MangaDex</SelectItem>
               <SelectItem value="Kitsu">Kitsu</SelectItem>
               <SelectItem value="AniList">AniList</SelectItem>
-              <SelectItem value="MangaUpdates">MangaUpdates</SelectItem>
             </SelectContent>
           </Select>
         </div>
