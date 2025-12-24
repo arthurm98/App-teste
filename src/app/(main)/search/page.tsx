@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Search as SearchIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { JikanManga } from "@/lib/jikan-data";
-import type { MangaDexManga, Relationship } from "@/lib/mangadex-data";
+import type { MangaDexManga, Relationship, MangaDexChapterFeed } from "@/lib/mangadex-data";
 import type { KitsuManga } from "@/lib/kitsu-data";
 import type { AniListManga } from "@/lib/anilist-data";
 import { OnlineMangaCard } from "../_components/online-manga-card";
@@ -34,7 +34,6 @@ function normalizeMangaType(type: string | null): MangaType {
     return 'Outro';
 }
 
-// Função para adaptar os dados da MangaDex para o formato JikanManga
 function adaptMangaDexToJikan(manga: MangaDexManga, coverUrl: string): JikanManga {
   const titleObj = manga.attributes.title;
   const mainTitle = titleObj.en || Object.values(titleObj).find(t => !!t) || "Untitled";
@@ -53,7 +52,7 @@ function adaptMangaDexToJikan(manga: MangaDexManga, coverUrl: string): JikanMang
     type: normalizeMangaType(manga.attributes.publicationDemographic || manga.type),
     chapters: manga.attributes.lastChapter ? parseFloat(manga.attributes.lastChapter) : null,
     status: manga.attributes.status,
-    score: null, // MangaDex API não fornece score diretamente na busca
+    score: null, 
     synopsis: synopsis,
     genres: manga.attributes.tags.filter(tag => tag.attributes.group === 'genre').map(tag => ({
       mal_id: 0,
@@ -64,7 +63,6 @@ function adaptMangaDexToJikan(manga: MangaDexManga, coverUrl: string): JikanMang
   };
 }
 
-// Função para adaptar os dados da Kitsu para o formato JikanManga
 function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
   const imageUrl = manga.attributes.posterImage?.original || "";
   return {
@@ -92,7 +90,6 @@ function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
   };
 }
 
-// Função para adaptar os dados da AniList para o formato JikanManga
 function adaptAniListToJikan(manga: AniListManga): JikanManga {
     const imageUrl = manga.coverImage.extraLarge || manga.coverImage.large || "";
     return {
@@ -111,7 +108,6 @@ function adaptAniListToJikan(manga: AniListManga): JikanManga {
         genres: manga.genres.map(genre => ({ mal_id: 0, type: 'manga', name: genre, url: '' })),
     };
 }
-
 
 export default function SearchPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -181,22 +177,22 @@ export default function SearchPage() {
       const searchMangaDex = async () => {
         try {
           const baseUrl = 'https://api.mangadex.org';
-          const encodedTitle = encodeURIComponent(debouncedSearchTerm.trim());
-          // Construir a URL manualmente para garantir a formatação correta dos parâmetros de array
-          const url = `${baseUrl}/manga?title=${encodedTitle}&limit=40&includes[]=cover_art&order[relevance]=desc`;
+          // Em vez de buscar o título, buscamos o "feed" de capítulos para pegar mangás populares/recentes
+          // e depois filtramos pelo título. É uma abordagem indireta, mas mais confiável.
+          const feedUrl = `${baseUrl}/manga?limit=100&order[latestUploadedChapter]=desc&includes[]=cover_art`;
+          const response = await fetch(feedUrl);
+      
+          if (!response.ok) throw new Error(`Status: ${response.status}`);
           
-          const response = await fetch(url);
-      
-          if (!response.ok) {
-            throw new Error(`Status: ${response.status}`);
-          }
-      
           const result = await response.json();
-          if (result.result !== 'ok' || !Array.isArray(result.data)) {
-            return [];
-          }
-      
-          const mangaList = result.data.filter((item: any): item is MangaDexManga => item.type === 'manga');
+          if (result.result !== 'ok' || !Array.isArray(result.data)) return [];
+          
+          const mangaList: MangaDexManga[] = result.data.filter((item: any): item is MangaDexManga => {
+              if (item.type !== 'manga') return false;
+              const titleObj = item.attributes.title;
+              const lowerSearch = debouncedSearchTerm.trim().toLowerCase();
+              return Object.values(titleObj).some(title => (title as string)?.toLowerCase().includes(lowerSearch));
+          });
           
           return mangaList.map((manga: MangaDexManga) => {
             const coverRel = manga.relationships.find((rel: Relationship) => rel.type === 'cover_art');
@@ -285,7 +281,6 @@ export default function SearchPage() {
         return [];
       };
       
-
       if (apiSource === "Jikan") {
         results = await searchJikan();
       } else if (apiSource === "MangaDex") {
@@ -418,3 +413,5 @@ export default function SearchPage() {
   );
 
 }
+
+    

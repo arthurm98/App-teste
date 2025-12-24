@@ -42,15 +42,19 @@ export default function MainLayout({
 
   return (
       <SidebarProvider>
-        <AppSidebar />
-        <div className="flex flex-col w-full">
-            <Header />
-            <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto mb-16 md:mb-0">
-                {children}
-            </main>
+        <div className="flex w-full">
+            <AppSidebar />
+            <div className="flex flex-col w-full">
+                <Header />
+                <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto mb-16 md:mb-0">
+                    {children}
+                </main>
+            </div>
             <BottomBar />
         </div>
         <FirebaseErrorListener />
       </SidebarProvider>
   );
 }
+
+    

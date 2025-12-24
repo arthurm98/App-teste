@@ -12,6 +12,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { useUser } from "@/firebase";
 
@@ -61,7 +62,10 @@ export function BottomBar() {
 
     return (
         <div className="md:hidden fixed bottom-0 left-0 z-50 w-full h-16 bg-background border-t border-border">
-            <div className="grid h-full max-w-lg grid-cols-4 mx-auto font-medium">
+            <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
+                <div className="flex items-center justify-center">
+                   <SidebarTrigger />
+                </div>
                 {menuItems.map((item) => {
                     const isActive = pathname === item.href;
                     return (
@@ -81,3 +85,5 @@ export function BottomBar() {
         </div>
     )
 }
+
+    

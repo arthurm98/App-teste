@@ -8,6 +8,7 @@ import { JikanManga } from '@/lib/jikan-data';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { getLatestMangaInfo } from '@/services/update-manga';
 
 interface LibraryContextType {
   library: Manga[];
@@ -25,6 +26,7 @@ export const LibraryContext = createContext<LibraryContextType | undefined>(unde
 
 const generateMangaDexId = (title: string) => `md-${title.toLowerCase().replace(/\s+/g, '-')}`;
 const LOCAL_STORAGE_KEY = 'mangatrack-library';
+const UPDATE_INTERVAL_DAYS = 7;
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const [localLibrary, setLocalLibrary] = useState<Manga[]>([]);
@@ -61,14 +63,48 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
   }, [localLibrary, isLocalLoaded, user]);
 
-  // Cloud library listener
+  const updateLibraryItem = useCallback((mangaId: string, updates: Partial<Manga>) => {
+     if (user && !user.isAnonymous && firestore) {
+      const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
+      updateDocumentNonBlocking(docRef, { ...updates, updatedAt: Timestamp.now() });
+    } else {
+      setLocalLibrary(prev => prev.map(m => m.id === mangaId ? { ...m, ...updates, updatedAt: Timestamp.now() } : m));
+    }
+  }, [user, firestore]);
+  
+
+  // Cloud library listener & weekly update
   useEffect(() => {
     let unsubscribe: Unsubscribe | undefined;
     if (user && !user.isAnonymous && firestore) {
       setIsCloudLoading(true);
       const libCollection = collection(firestore, 'users', user.uid, 'library');
       unsubscribe = onSnapshot(libCollection, snapshot => {
-        const cloudData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Manga));
+        const now = Timestamp.now();
+        const cloudData = snapshot.docs.map(doc => {
+            const mangaData = { ...doc.data(), id: doc.id } as Manga;
+
+            // Inicia verificação de atualização semanal
+            const updatedAt = (mangaData.updatedAt as Timestamp) || mangaData.createdAt;
+            if (updatedAt) {
+                const diffDays = (now.seconds - updatedAt.seconds) / (60 * 60 * 24);
+                if (diffDays > UPDATE_INTERVAL_DAYS) {
+                    console.log(`Verificando atualizações para "${mangaData.title}"...`);
+                    getLatestMangaInfo(mangaData.id, mangaData.title).then(latestInfo => {
+                        if (latestInfo && latestInfo.totalChapters > mangaData.totalChapters) {
+                            console.log(`"${mangaData.title}" atualizado para ${latestInfo.totalChapters} capítulos.`);
+                            updateLibraryItem(mangaData.id, { totalChapters: latestInfo.totalChapters });
+                             toast({
+                                title: "Capítulos Atualizados",
+                                description: `Novos capítulos disponíveis para "${mangaData.title}".`,
+                            });
+                        }
+                    });
+                }
+            }
+            return mangaData;
+        });
+
         setCloudLibrary(cloudData);
         setIsCloudLoading(false);
       }, error => {
@@ -86,23 +122,20 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       });
     } else {
       setCloudLibrary([]);
-      // Para usuários anônimos ou deslogados, o carregamento da nuvem não se aplica.
       setIsCloudLoading(false);
     }
     return () => unsubscribe?.();
-  }, [user, firestore, toast]);
+  }, [user, firestore, toast, updateLibraryItem]);
 
   // Sync local to cloud on login
   useEffect(() => {
     if (user && !user.isAnonymous && firestore && isLocalLoaded && localLibrary.length > 0) {
-      // Pequeno delay para garantir que o listener da nuvem tenha tempo de carregar os dados iniciais
       const timer = setTimeout(() => {
         const syncLocalToCloud = () => {
           const batch = writeBatch(firestore);
           let itemsToSync = 0;
           
           localLibrary.forEach(localManga => {
-            // Re-checa a cloudLibrary atualizada antes de sincronizar
             const cloudManga = cloudLibrary.find(m => m.id === localManga.id);
             if (!cloudManga) {
               const docRef = doc(firestore, 'users', user.uid, 'library', localManga.id);
@@ -118,7 +151,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
                 title: "Sincronização Concluída",
                 description: `${itemsToSync} título(s) da sua biblioteca local foram salvos na nuvem.`
               });
-              // Limpa a biblioteca local após a sincronização bem-sucedida
               setLocalLibrary([]);
               window.localStorage.removeItem(LOCAL_STORAGE_KEY);
             }).catch((error) => {
@@ -135,27 +167,18 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
               });
             });
           } else if (localLibrary.length > 0) {
-            // Se não há nada a sincronizar, apenas limpa o local storage
             setLocalLibrary([]);
             window.localStorage.removeItem(LOCAL_STORAGE_KEY);
           }
         };
-
         syncLocalToCloud();
-
-      }, 1000); // Delay de 1 segundo
-
+      }, 1000);
       return () => clearTimeout(timer);
     }
   }, [user, firestore, isLocalLoaded, localLibrary, cloudLibrary, toast]);
 
   const library = useMemo(() => (!user || user.isAnonymous ? localLibrary : cloudLibrary), [user, cloudLibrary, localLibrary]);
-  const isLoading = useMemo(() => {
-    if (!user || user.isAnonymous) {
-      return !isLocalLoaded;
-    }
-    return isCloudLoading;
-  }, [user, isCloudLoading, isLocalLoaded]);
+  const isLoading = useMemo(() => isUserLoading || (!user ? !isLocalLoaded : isCloudLoading), [user, isUserLoading, isCloudLoading, isLocalLoaded]);
 
 
   const isMangaInLibrary = useCallback((mangaId: number, title?: string) => {
@@ -170,22 +193,23 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
     
     const mangaId = manga.mal_id > 0 ? String(manga.mal_id) : generateMangaDexId(manga.title);
+    const now = Timestamp.now();
     const newManga: Manga = {
       id: mangaId,
       title: manga.title,
       type: manga.type as MangaType, // O tipo já foi normalizado na busca
       status: "Planejo Ler",
-      coverImageId: '',
       imageUrl: manga.images.webp.large_image_url || manga.images.webp.image_url,
       totalChapters: manga.chapters || 0,
       readChapters: 0,
       genres: manga.genres.map(g => g.name),
+      createdAt: now,
+      updatedAt: now,
     };
 
     if (user && !user.isAnonymous && firestore) {
       const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
-      const dataToSave = { ...newManga, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
-      setDocumentNonBlocking(docRef, dataToSave, { merge: true });
+      setDocumentNonBlocking(docRef, newManga, { merge: true });
     } else {
       setLocalLibrary(prev => [...prev, newManga]);
     }
@@ -203,15 +227,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       toast({ title: "Removido da Biblioteca", description: `${manga.title} foi removido.`, variant: "destructive" });
     }
   }, [library, toast, user, firestore]);
-
-  const updateLibraryItem = (mangaId: string, updates: Partial<Manga> & { updatedAt?: Timestamp }) => {
-     if (user && !user.isAnonymous && firestore) {
-      const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
-      updateDocumentNonBlocking(docRef, { ...updates, updatedAt: Timestamp.now() });
-    } else {
-      setLocalLibrary(prev => prev.map(m => m.id === mangaId ? { ...m, ...updates } : m));
-    }
-  };
 
   const updateChapter = useCallback((mangaId: string, newChapter: number) => {
     const manga = library.find(m => m.id === mangaId);
@@ -234,7 +249,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     if (shouldShowCompletedToast) {
       toast({ title: "Título Concluído!", description: `Você terminou de ler ${manga.title}.` });
     }
-  }, [library, toast]);
+  }, [library, toast, updateLibraryItem]);
 
   const updateStatus = useCallback((mangaId: string, newStatus: MangaStatus) => {
     const manga = library.find(m => m.id === mangaId);
@@ -249,7 +264,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
     updateLibraryItem(mangaId, updates);
     toast({ title: "Status Atualizado", description: `O status de "${manga.title}" foi alterado para ${newStatus}.` });
-  }, [library, toast]);
+  }, [library, toast, updateLibraryItem]);
   
   const updateMangaDetails = useCallback((mangaId: string, details: Partial<Pick<Manga, 'totalChapters'>>) => {
      const manga = library.find(m => m.id === mangaId);
@@ -266,10 +281,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
      updateLibraryItem(mangaId, updates);
      toast({ title: "Detalhes Atualizados", description: `As informações de "${manga.title}" foram salvas.` });
-  }, [library, toast]);
+  }, [library, toast, updateLibraryItem]);
 
   const restoreLibrary = useCallback((newLibrary: Manga[]) => {
-    // Permite a restauração se não houver usuário ou se o usuário for anônimo
     if (!user || user.isAnonymous) {
        setLocalLibrary(newLibrary);
        toast({ title: "Restauração Concluída", description: "Sua biblioteca local foi restaurada." });
@@ -288,3 +302,5 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     </LibraryContext.Provider>
   );
 }
+
+    

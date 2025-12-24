@@ -79,12 +79,16 @@ function UserNav() {
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6 lg:justify-end">
-        
-        <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6 lg:justify-end">
+        <div className="md:hidden">
+             <SidebarTrigger />
+        </div>
+        <div className="flex flex-1 items-center justify-end gap-4">
             <ThemeToggle />
             <UserNav />
         </div>
     </header>
   );
 }
+
+    
