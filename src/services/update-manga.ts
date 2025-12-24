@@ -2,12 +2,29 @@
 import { JikanManga } from "@/lib/jikan-data";
 import { KitsuManga } from "@/lib/kitsu-data";
 import { AniListManga } from "@/lib/anilist-data";
-import { MangaUpdatesManga } from "@/lib/mangaupdates-data";
+import { getLatestChapter } from "@/ai/flows/get-latest-chapter-flow";
 
 interface MangaUpdateInfo {
     totalChapters: number | null;
     latestChapter: number | null;
 }
+
+// AI-powered function to get the latest chapter
+async function getInfoFromAI(title: string): Promise<MangaUpdateInfo | null> {
+    try {
+        console.log(`[AI] Searching for latest chapter of "${title}"...`);
+        const result = await getLatestChapter({ mangaTitle: title });
+        if (result && result.latestChapter) {
+            console.log(`[AI] Found latest chapter for "${title}": ${result.latestChapter}`);
+            return { totalChapters: result.latestChapter, latestChapter: result.latestChapter };
+        }
+        console.log(`[AI] No chapter info found for "${title}".`);
+    } catch (error) {
+        console.error(`[AI] Request failed for title ${title}:`, error);
+    }
+    return null;
+}
+
 
 // Busca as informações mais recentes de um mangá na API Jikan (MyAnimeList)
 async function getInfoFromJikan(mangaId: string, title?: string): Promise<MangaUpdateInfo | null> {
@@ -83,41 +100,25 @@ async function getInfoFromAniList(title: string): Promise<MangaUpdateInfo | null
     return null;
 }
 
-// Busca as informações mais recentes na API MangaUpdates
-async function getInfoFromMangaUpdates(title: string): Promise<MangaUpdateInfo | null> {
-    try {
-        const searchResponse = await fetch('https://api.mangaupdates.com/v1/series/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ search: title, perpage: 1 })
-        });
-        if (!searchResponse.ok) return null;
-
-        const searchData = await searchResponse.json();
-        const manga: MangaUpdatesManga = (searchData.results || [])[0]?.record;
-
-        if (manga) {
-            return { totalChapters: manga.latest_chapter, latestChapter: manga.latest_chapter };
-        }
-    } catch (error) {
-        console.error(`MangaUpdates API request failed for title ${title}:`, error);
-    }
-    return null;
-}
-
-
 // Função principal que tenta buscar em várias APIs em cascata.
 export async function getLatestMangaInfo(mangaId: string, title: string): Promise<MangaUpdateInfo | null> {
     
-    // Array de funções de busca para usar como fallback
+    // 1. Tentar a busca com IA primeiro, pois é a mais robusta.
+    const aiResult = await getInfoFromAI(title);
+    if (aiResult && (aiResult.latestChapter || aiResult.totalChapters)) {
+        return aiResult;
+    }
+
+    console.log("AI search failed, falling back to traditional APIs...");
+
+    // 2. Fallback para as APIs tradicionais
     const fallbackSearchers = [
-        () => getInfoFromMangaUpdates(title), // Prioridade para quem tem "latest_chapter"
         () => getInfoFromJikan('', title),
         () => getInfoFromKitsu(title),
         () => getInfoFromAniList(title),
     ];
 
-    // Tenta a fonte primária primeiro (Jikan/Anilist ID se for um número)
+    // Tenta a fonte primária (Jikan/Anilist ID se for um número)
     if (!isNaN(Number(mangaId))) {
         const primaryInfo = await getInfoFromJikan(mangaId);
         if (primaryInfo) return primaryInfo;

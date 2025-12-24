@@ -1,13 +1,31 @@
 
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useLibrary } from "@/hooks/use-library";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase";
 
 const LAST_CHECK_KEY = 'mangatrack-last-check';
+const COOLDOWN_KEY = 'mangatrack-cooldown-end';
+const COOLDOWN_DURATION = 12 * 60 * 60 * 1000; // 12 horas em milissegundos
+
+function calculateRemainingTime(endTime: number) {
+    const now = new Date().getTime();
+    const remaining = endTime - now;
+
+    if (remaining <= 0) {
+        return "00:00:00";
+    }
+
+    const hours = Math.floor(remaining / (1000 * 60 * 60));
+    const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 
 interface SettingsContentProps {
     showSyncOptions?: boolean;
@@ -19,12 +37,33 @@ export function SettingsContent({ showSyncOptions = false }: SettingsContentProp
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { user } = useUser();
     const [lastCheck, setLastCheck] = useState<string | null>(null);
+    const [cooldownTime, setCooldownTime] = useState<string | null>(null);
 
     useEffect(() => {
         if (showSyncOptions) {
+            // Seta a data da última verificação
             const savedDate = localStorage.getItem(LAST_CHECK_KEY);
             if (savedDate) {
                 setLastCheck(new Date(savedDate).toLocaleString('pt-BR'));
+            }
+
+            // Gerencia o cooldown
+            const cooldownEndTime = localStorage.getItem(COOLDOWN_KEY);
+            if (cooldownEndTime) {
+                const endTime = parseInt(cooldownEndTime, 10);
+                if (new Date().getTime() < endTime) {
+                    setCooldownTime(calculateRemainingTime(endTime));
+                    const interval = setInterval(() => {
+                        const remaining = calculateRemainingTime(endTime);
+                        if (remaining === "00:00:00") {
+                            clearInterval(interval);
+                            setCooldownTime(null);
+                        } else {
+                            setCooldownTime(remaining);
+                        }
+                    }, 1000);
+                    return () => clearInterval(interval);
+                }
             }
         }
     }, [showSyncOptions]);
@@ -118,17 +157,30 @@ export function SettingsContent({ showSyncOptions = false }: SettingsContentProp
             toast({ title: "Aviso", description: "A verificação automática só funciona para contas logadas." });
             return;
         }
+        if (cooldownTime) {
+            toast({ title: "Aguarde", description: `Você pode forçar a verificação novamente em ${cooldownTime}.` });
+            return;
+        }
+
         triggerUpdateCheck();
         const now = new Date();
+        const cooldownEndTime = now.getTime() + COOLDOWN_DURATION;
+
         localStorage.setItem(LAST_CHECK_KEY, now.toISOString());
+        localStorage.setItem(COOLDOWN_KEY, String(cooldownEndTime));
+
         setLastCheck(now.toLocaleString('pt-BR'));
+        setCooldownTime(calculateRemainingTime(cooldownEndTime));
+
         toast({ title: "Verificação Iniciada", description: "A busca por novos capítulos para toda a biblioteca começou em segundo plano." });
     }
 
     if (showSyncOptions) {
         return (
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <Button onClick={handleForceCheck} disabled={!user || user.isAnonymous}>Forçar Verificação</Button>
+                <Button onClick={handleForceCheck} disabled={!user || user.isAnonymous || !!cooldownTime}>
+                     {cooldownTime ? `Aguarde ${cooldownTime}` : 'Forçar Verificação'}
+                </Button>
                 {lastCheck && (
                     <p className="text-sm text-muted-foreground mt-2 sm:mt-0">
                         Última verificação: {lastCheck}
