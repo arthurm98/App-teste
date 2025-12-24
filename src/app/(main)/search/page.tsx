@@ -238,12 +238,12 @@ export default function SearchPage() {
             }
         });
 
-        // Remove duplicados baseando-se no título (case-insensitive)
-        const uniqueTitles = new Set<string>();
+        // Remove duplicados baseando-se na combinação de título e tipo
+        const uniqueKeys = new Set<string>();
         results = combinedResults.filter(manga => {
-            const lowerCaseTitle = manga.title.toLowerCase();
-            if (!uniqueTitles.has(lowerCaseTitle)) {
-                uniqueTitles.add(lowerCaseTitle);
+            const key = `${manga.title.toLowerCase()}|${manga.type}`;
+            if (!uniqueKeys.has(key)) {
+                uniqueKeys.add(key);
                 return true;
             }
             return false;
