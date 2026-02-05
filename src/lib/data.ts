@@ -8,11 +8,15 @@ export type Manga = {
   id: string;
   title: string;
   type: MangaType;
+  /**
+   * O status de leitura é definido exclusivamente pela ação do usuário.
+   * Não deve ser inferido automaticamente.
+   */
   status: MangaStatus;
   
   /**
    * O número total de capítulos da obra, se for conhecido e finalizado.
-   * Para obras em andamento, pode ser 0 ou o total planejado.
+   * Para obras em andamento, pode ser 0.
    * Este campo é definido pelo usuário ou por APIs para obras concluídas.
    */
   totalChapters: number;
@@ -23,9 +27,9 @@ export type Manga = {
   readChapters: number;
   
   /**
-   * O capítulo mais recente lançado, obtido através da API.
-   * Usado para calcular o progresso de obras em andamento e não deve ser
-   * interpretado como o total final da obra.
+   * O capítulo mais recente lançado, obtido através de APIs.
+   * Representa a disponibilidade atual, não a conclusão da obra.
+   * Usado para calcular o progresso de obras em andamento.
    */
   latestChapter: number;
   

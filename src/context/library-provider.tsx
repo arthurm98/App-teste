@@ -301,12 +301,12 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
     const updates: Partial<Manga> = { readChapters: newChapter };
 
-    // Não marca mais como "Completo" automaticamente. O usuário deve fazer isso manualmente.
     // Apenas muda o status para "Lendo" se ele começar a ler um título que estava planejando.
+    // Não infere mais o status "Completo" automaticamente.
     if (newChapter > 0 && manga.status === 'Planejo Ler') {
       updates.status = 'Lendo';
     } else if (newChapter <= 0 && manga.status === 'Lendo') {
-      // Volta para 'Planejo Ler' se o progresso for zerado
+      // Volta para 'Planejo Ler' se o progresso for zerado.
       updates.status = 'Planejo Ler';
     }
     
@@ -318,6 +318,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     if (!manga) return;
 
     const updates: Partial<Manga> = { status: newStatus };
+    
+    // Se o usuário marcar manualmente como "Completo", e soubermos o total de capítulos,
+    // sincronizamos os capítulos lidos com o total.
     if (newStatus === "Completo" && manga.totalChapters > 0) {
       updates.readChapters = manga.totalChapters;
     } else if (newStatus === "Planejo Ler") {
@@ -338,7 +341,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
      if (details.totalChapters !== undefined && manga.readChapters > details.totalChapters && details.totalChapters > 0) {
         updates.readChapters = details.totalChapters;
      }
-     // Não infere mais o status "Completo" automaticamente.
+     
+     // Não infere mais o status "Completo" automaticamente com base na igualdade de capítulos.
+     // A conclusão agora é uma ação explícita do usuário através de updateStatus.
 
      updateLibraryItem(mangaId, updates);
      toast({ title: "Detalhes Atualizados", description: `As informações de "${manga.title}" foram salvas.` });
