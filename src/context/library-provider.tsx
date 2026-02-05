@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
@@ -340,12 +339,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
      
      const updates: Partial<Manga> = {...details};
      
-     // Respeita a autoridade do usuário: se o novo total for menor que o lido,
-     // ajusta o lido para evitar um estado inválido (read > total).
-     if (details.totalChapters !== undefined && manga.readChapters > details.totalChapters && details.totalChapters > 0) {
-        updates.readChapters = details.totalChapters;
-     }
-
      updateLibraryItem(mangaId, updates);
      toast({ title: "Detalhes Atualizados", description: `As informações de "${manga.title}" foram salvas.` });
   }, [library, toast, updateLibraryItem]);

@@ -46,15 +46,6 @@ export function EditMangaDialog({ isOpen, onOpenChange, manga }: EditMangaDialog
       return;
     }
     
-    if (newTotalChapters < manga.readChapters && newTotalChapters > 0) {
-       toast({
-        variant: "destructive",
-        title: "Valor Inválido",
-        description: "O total de capítulos não pode ser menor que os capítulos já lidos.",
-      });
-      return;
-    }
-
     updateMangaDetails(manga.id, { totalChapters: newTotalChapters });
     onOpenChange(false);
   };
