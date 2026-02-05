@@ -13,10 +13,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, Trash2, Check, BookOpen, Clock, MoreVertical, Pencil } from "lucide-react";
+import { Minus, Plus, Trash2, Check, BookOpen, Clock, MoreVertical, Pencil, RefreshCw } from "lucide-react";
 import { useLibrary } from "@/hooks/use-library";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { EditMangaDialog } from "./edit-manga-dialog";
+import { isAiAvailable } from "@/ai/config";
 
 
 interface MangaCardProps {
@@ -24,7 +25,7 @@ interface MangaCardProps {
 }
 
 export function MangaCard({ manga }: MangaCardProps) {
-  const { updateChapter, removeFromLibrary, updateStatus } = useLibrary();
+  const { updateChapter, removeFromLibrary, updateStatus, checkForUpdates } = useLibrary();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isImageError, setIsImageError] = useState(false);
 
@@ -40,6 +41,10 @@ export function MangaCard({ manga }: MangaCardProps) {
   
   const handleStatusChange = (status: MangaStatus) => {
     updateStatus(manga.id, status);
+  }
+
+  const handleCheckForUpdates = () => {
+    checkForUpdates(manga.title);
   }
 
   return (
@@ -82,6 +87,10 @@ export function MangaCard({ manga }: MangaCardProps) {
                       <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
                           <Pencil className="mr-2 h-4 w-4" />
                           <span>Editar</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleCheckForUpdates} disabled={!isAiAvailable}>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          <span>Verificar Atualizações</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleStatusChange("Lendo")} disabled={manga.status === 'Lendo'}>
