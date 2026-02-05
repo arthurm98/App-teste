@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, Check } from "lucide-react";
 import { useLibrary } from "@/hooks/use-library";
+import { MangaType } from "@/lib/data";
 
 interface OnlineMangaCardProps {
   manga: JikanManga;
@@ -23,8 +24,7 @@ interface OnlineMangaCardProps {
 export function OnlineMangaCard({ manga }: OnlineMangaCardProps) {
   const { addToLibrary, isMangaInLibrary } = useLibrary();
   const [isImageError, setIsImageError] = useState(false);
-  // A busca por ID do Jikan/Anilist é mais confiável. Se não houver, verificamos por título (fallback para Kitsu)
-  const isInLibrary = manga.mal_id ? isMangaInLibrary(manga.mal_id) : isMangaInLibrary(0, manga.title);
+  const isInLibrary = isMangaInLibrary(manga.mal_id, manga.title, manga.type as MangaType);
 
 
   const handleAdd = () => {

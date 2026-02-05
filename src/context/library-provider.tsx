@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
@@ -16,7 +17,7 @@ interface LibraryContextType {
   removeFromLibrary: (mangaId: string) => void;
   updateChapter: (mangaId: string, newChapter: number) => void;
   updateStatus: (mangaId: string, newStatus: MangaStatus) => void;
-  isMangaInLibrary: (mangaId: number, title?: string) => boolean;
+  isMangaInLibrary: (mangaId: number, title?: string, type?: MangaType) => boolean;
   restoreLibrary: (newLibrary: Manga[]) => void;
   updateMangaDetails: (mangaId: string, details: Partial<Pick<Manga, 'totalChapters'>>) => void;
   triggerUpdateCheck: () => void;
@@ -25,7 +26,7 @@ interface LibraryContextType {
 
 export const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
 
-const generateFallbackId = (title: string) => `fb-${title.toLowerCase().replace(/\s+/g, '-')}`;
+const generateFallbackId = (title: string, type: MangaType) => `fb-${type.toLowerCase()}-${title.toLowerCase().replace(/\s+/g, '-')}`;
 const LOCAL_STORAGE_KEY = 'mangatrack-library';
 const NOTIFICATIONS_KEY = 'mangatrack-notifications';
 const UPDATE_INTERVAL_DAYS = 7;
@@ -245,23 +246,34 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const isLoading = useMemo(() => isUserLoading || (!user ? !isLocalLoaded : isCloudLoading), [user, isUserLoading, isCloudLoading, isLocalLoaded]);
 
 
-  const isMangaInLibrary = useCallback((mangaId: number, title?: string) => {
-    const checkId = mangaId > 0 ? String(mangaId) : generateFallbackId(title || '');
-    return library.some(m => m.id === checkId);
+  const isMangaInLibrary = useCallback((mangaId: number, title?: string, type?: MangaType) => {
+    if (!title || !type) {
+        // Não é possível verificar de forma confiável sem título e tipo, então recorra à verificação de ID se disponível.
+        if (mangaId > 0) return library.some(m => m.id === String(mangaId));
+        return false;
+    }
+    // A obra é considerada única pela combinação de título e tipo.
+    return library.some(m => 
+        m.title.trim().toLowerCase() === title.trim().toLowerCase() && m.type === type
+    );
   }, [library]);
 
   const addToLibrary = useCallback((manga: JikanManga) => {
-    if (isMangaInLibrary(manga.mal_id, manga.title)) {
-      toast({ title: "Já está na biblioteca", description: `${manga.title} já foi adicionado.` });
+    const mangaType = manga.type as MangaType;
+
+    if (isMangaInLibrary(manga.mal_id, manga.title, mangaType)) {
+      toast({ title: "Já está na biblioteca", description: `${manga.title} (${mangaType}) já foi adicionado.` });
       return;
     }
     
-    const mangaId = manga.mal_id > 0 ? String(manga.mal_id) : generateFallbackId(manga.title);
+    // O ID de um manga deve ser estável. Se a API fornece um (MAL, AniList), usamos ele.
+    // Se não (Kitsu), geramos um a partir do título e tipo.
+    const mangaId = manga.mal_id > 0 ? String(manga.mal_id) : generateFallbackId(manga.title, mangaType);
     const now = Timestamp.now();
     const newManga: Manga = {
       id: mangaId,
       title: manga.title,
-      type: manga.type as MangaType, // O tipo já foi normalizado na busca
+      type: mangaType, // O tipo já foi normalizado na busca
       status: "Planejo Ler",
       imageUrl: manga.images.webp.large_image_url || manga.images.webp.image_url,
       totalChapters: manga.chapters || 0,
@@ -278,7 +290,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     } else {
       setLocalLibrary(prev => [...prev, newManga]);
     }
-    toast({ title: "Adicionado à Biblioteca", description: `${manga.title} foi adicionado à sua lista 'Planejo Ler'.` });
+    toast({ title: "Adicionado à Biblioteca", description: `${manga.title} (${mangaType}) foi adicionado à sua lista 'Planejo Ler'.` });
   }, [isMangaInLibrary, toast, user, firestore]);
 
   const removeFromLibrary = useCallback((mangaId: string) => {
