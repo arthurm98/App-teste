@@ -30,13 +30,14 @@ export function MangaCard({ manga }: MangaCardProps) {
 
   const imageUrl = manga.imageUrl || "https://picsum.photos/seed/placeholder/400/600";
   
-  // Define a fonte da verdade para o progresso. Usa `latestChapter` se disponível, senão `totalChapters`.
-  const progressDenominator = manga.latestChapter > 0 ? manga.latestChapter : manga.totalChapters;
+  // A barra de progresso agora usa o totalChapters definido pelo usuário.
+  // latestChapter é apenas informativo.
+  const progressDenominator = manga.totalChapters > 0 ? manga.totalChapters : (manga.latestChapter > 0 ? manga.latestChapter : 0);
   const progress = progressDenominator > 0 ? (manga.readChapters / progressDenominator) * 100 : 0;
 
   const handleChapterChange = (amount: number) => {
-    // Garante que o progresso não ultrapasse o denominador de progresso
-    const newChapter = Math.max(0, Math.min(progressDenominator, manga.readChapters + amount));
+    // O usuário tem controle total para incrementar e decrementar, exceto para valores negativos.
+    const newChapter = Math.max(0, manga.readChapters + amount);
     updateChapter(manga.id, newChapter);
   };
   
@@ -114,7 +115,7 @@ export function MangaCard({ manga }: MangaCardProps) {
                       <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleChapterChange(-1)} disabled={manga.readChapters <= 0}>
                           <Minus className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleChapterChange(1)} disabled={manga.readChapters >= progressDenominator}>
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleChapterChange(1)}>
                           <Plus className="h-4 w-4" />
                       </Button>
                   </div>

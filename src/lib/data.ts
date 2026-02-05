@@ -4,29 +4,25 @@ import { Timestamp } from "firebase/firestore";
 export type MangaStatus = "Lendo" | "Planejo Ler" | "Completo";
 export type MangaType = "Mangá" | "Manhwa" | "Webtoon" | "Novel" | "Outro";
 
+/**
+ * Representa um título na biblioteca do usuário.
+ * A organização nas abas (status) é 100% controlada pelo usuário.
+ * Nenhuma lógica automática deve alterar o campo 'status'.
+ */
 export type Manga = {
   id: string;
   title: string;
   type: MangaType;
+  /** O status de leitura definido pelo usuário. Determina em qual aba a obra aparece. */
   status: MangaStatus;
   
-  /**
-   * O número total de capítulos da obra, se for conhecido e finalizado.
-   * Para obras em andamento, pode ser 0 ou o total planejado.
-   * Este campo é definido pelo usuário ou por APIs para obras concluídas.
-   */
+  /** O número total de capítulos da obra, definido pelo usuário. */
   totalChapters: number;
   
-  /**
-   * O número de capítulos que o usuário marcou como lido.
-   */
+  /** O número de capítulos que o usuário marcou como lido. */
   readChapters: number;
   
-  /**
-   * O capítulo mais recente lançado, obtido através da API.
-   * Usado para calcular o progresso de obras em andamento e não deve ser
-   * interpretado como o total final da obra.
-   */
+  /** O capítulo mais recente lançado, obtido via API. Serve apenas como informação. */
   latestChapter: number;
   
   genres: string[];

@@ -26,37 +26,39 @@ interface EditMangaDialogProps {
 export function EditMangaDialog({ isOpen, onOpenChange, manga }: EditMangaDialogProps) {
   const { updateMangaDetails } = useLibrary();
   const { toast } = useToast();
+  
+  const [readChapters, setReadChapters] = useState(manga.readChapters);
   const [totalChapters, setTotalChapters] = useState(manga.totalChapters);
+  const [latestChapter, setLatestChapter] = useState(manga.latestChapter);
 
-  // Garante que o estado seja atualizado se o manga prop mudar
   useEffect(() => {
     if (isOpen) {
+      setReadChapters(manga.readChapters);
       setTotalChapters(manga.totalChapters);
+      setLatestChapter(manga.latestChapter);
     }
-  }, [isOpen, manga.totalChapters]);
+  }, [isOpen, manga]);
 
   const handleSave = () => {
-    const newTotalChapters = Number(totalChapters);
+    const newRead = Number(readChapters);
+    const newTotal = Number(totalChapters);
+    const newLatest = Number(latestChapter);
 
-    if (isNaN(newTotalChapters) || newTotalChapters < 0) {
+    if (isNaN(newRead) || isNaN(newTotal) || isNaN(newLatest) || newRead < 0 || newTotal < 0 || newLatest < 0) {
       toast({
         variant: "destructive",
-        title: "Valor Inválido",
-        description: "Por favor, insira um número válido para os capítulos totais.",
+        title: "Valores Inválidos",
+        description: "Por favor, insira números válidos para os capítulos.",
       });
       return;
     }
     
-    if (newTotalChapters < manga.readChapters && newTotalChapters > 0) {
-       toast({
-        variant: "destructive",
-        title: "Valor Inválido",
-        description: "O total de capítulos não pode ser menor que os capítulos já lidos.",
-      });
-      return;
-    }
-
-    updateMangaDetails(manga.id, { totalChapters: newTotalChapters });
+    // Nenhuma validação automática. O usuário tem autoridade total.
+    updateMangaDetails(manga.id, { 
+      readChapters: newRead,
+      totalChapters: newTotal,
+      latestChapter: newLatest,
+    });
     onOpenChange(false);
   };
 
@@ -66,19 +68,45 @@ export function EditMangaDialog({ isOpen, onOpenChange, manga }: EditMangaDialog
         <DialogHeader>
           <DialogTitle className="font-headline">Editar {manga.title}</DialogTitle>
           <DialogDescription>
-            Atualize as informações do seu título. Clique em salvar quando terminar.
+            Você tem controle total. Altere os valores como desejar.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="readChapters" className="text-right">
+              Capítulos Lidos
+            </Label>
+            <Input
+              id="readChapters"
+              type="number"
+              value={readChapters}
+              onChange={(e) => setReadChapters(Number(e.target.value))}
+              className="col-span-3"
+              min="0"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="totalChapters" className="text-right">
-              Capítulos Totais (Final)
+              Capítulos Totais
             </Label>
             <Input
               id="totalChapters"
               type="number"
               value={totalChapters}
               onChange={(e) => setTotalChapters(Number(e.target.value))}
+              className="col-span-3"
+              min="0"
+            />
+          </div>
+           <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="latestChapter" className="text-right">
+              Último Cap. (API)
+            </Label>
+            <Input
+              id="latestChapter"
+              type="number"
+              value={latestChapter}
+              onChange={(e) => setLatestChapter(Number(e.target.value))}
               className="col-span-3"
               min="0"
             />
