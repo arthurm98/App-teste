@@ -10,12 +10,12 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
-export const GetLatestChapterInputSchema = z.object({
+const GetLatestChapterInputSchema = z.object({
   title: z.string().describe('The title of the manga to search for.'),
 });
 export type GetLatestChapterInput = z.infer<typeof GetLatestChapterInputSchema>;
 
-export const GetLatestChapterOutputSchema = z.object({
+const GetLatestChapterOutputSchema = z.object({
   latestChapter: z.number().optional().describe('The latest chapter number found.'),
   source: z.string().optional().describe('The URL of the source where the information was found.'),
   reasoning: z.string().describe('An explanation of how the chapter number was determined and from where.'),

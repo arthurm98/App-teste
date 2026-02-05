@@ -15,10 +15,10 @@ export const metadata: Metadata = {
     default: 'MangaTrack',
     template: `%s | MangaTrack`,
   },
-  description: 'Organize e acompanhe seus mangás, manhwas e webtoons em um só lugar. Nunca mais perca o fio da meada.',
+  description: 'Sua biblioteca definitiva para organizar e acompanhar o progresso de leitura de mangás, manhwas, webtoons e todos os seus quadrinhos.',
   manifest: '/manifest.json',
   applicationName: 'MangaTrack',
-  keywords: ['manga', 'manhwa', 'webtoon', 'organizador', 'tracker', 'leitor', 'biblioteca'],
+  keywords: ['manga', 'manhwa', 'webtoon', 'quadrinhos', 'comics', 'organizador', 'tracker', 'leitor', 'biblioteca'],
   authors: [{ name: 'ArthurM', url: 'https://github.com/ArthurMaverick' }],
   creator: 'ArthurM',
   publisher: 'Firebase Studio',
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: APP_URL,
     title: 'MangaTrack',
-    description: 'Organize e acompanhe seus mangás, manhwas e webtoons em um só lugar.',
+    description: 'Sua biblioteca definitiva para organizar e acompanhar o progresso de leitura de mangás, manhwas, webtoons e todos os seus quadrinhos.',
     siteName: 'MangaTrack',
     images: [
       {
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'MangaTrack',
-    description: 'Organize e acompanhe seus mangás, manhwas e webtoons em um só lugar.',
+    description: 'Sua biblioteca definitiva para organizar e acompanhar o progresso de leitura de mangás, manhwas, webtoons e todos os seus quadrinhos.',
     images: [`${APP_URL}/og-image.png`],
   },
 };

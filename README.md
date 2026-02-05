@@ -1,21 +1,22 @@
-# MangaTrack: Seu Organizador de Mangás, Manhwas e Webtoons
+# MangaTrack: Sua Biblioteca Definitiva de Quadrinhos
 
-MangaTrack é uma aplicação web moderna, rápida e responsiva, projetada para ajudar você a organizar e acompanhar o progresso de leitura de todos os seus mangás, manhwas, webtoons e novels em um único lugar. Com uma interface limpa e foco na experiência do usuário, nunca mais perca o fio da meada em suas leituras.
+Assim como o TV Time organiza suas séries e filmes, o **MangaTrack** é a sua central para organizar e acompanhar o progresso de leitura de todos os seus mangás, manhwas, webtoons e novels. Com uma interface limpa e foco na experiência do usuário, nunca mais perca o fio da meada em suas leituras.
 
 A aplicação é um **Progressive Web App (PWA)**, o que significa que pode ser instalada em seu celular ou desktop para uma experiência mais próxima a um aplicativo nativo.
 
 ## ✨ Recursos Principais
 
-- **Biblioteca Pessoal:** Adicione títulos à sua biblioteca e organize-os por status: "Lendo", "Planejo Ler" ou "Completo".
-- **Busca Online Inteligente:** Encontre novos títulos buscando em múltiplas fontes populares, como MyAnimeList (via Jikan), Kitsu e AniList.
-- **Acompanhamento de Progresso:** Marque facilmente os capítulos lidos e visualize seu progresso com barras de porcentagem.
+- **Biblioteca Pessoal:** Adicione títulos à sua biblioteca e organize-os com status de leitura controlados por você.
+- **Busca Online Inteligente:** Encontre novos títulos buscando em múltiplas fontes populares como MyAnimeList, Kitsu e AniList.
+- **IA para Busca de Capítulos:** Utiliza IA para encontrar os capítulos mais recentes quando as APIs tradicionais falham.
+- **Acompanhamento de Progresso:** Marque facilmente os capítulos lidos e visualize seu progresso.
 - **Estatísticas Visuais:** Tenha insights sobre seus hábitos de leitura com gráficos que mostram a distribuição de gêneros e o status dos seus títulos.
-- **Sincronização na Nuvem:** Crie uma conta com e-mail e senha para ter sua biblioteca sincronizada e acessível em qualquer dispositivo através do Firebase.
+- **Sincronização na Nuvem:** Crie uma conta para ter sua biblioteca sincronizada e acessível em qualquer dispositivo através do Firebase.
 - **Modo Offline:** Prefere não criar uma conta? Use o modo anônimo e seus dados serão salvos localmente no seu navegador.
 - **Backup e Restauração:** No modo offline, você pode exportar sua biblioteca para um arquivo JSON e restaurá-la a qualquer momento.
-- **Design Responsivo e Moderno:** Interface otimizada para uma experiência de uso agradável tanto em desktops quanto em dispositivos móveis (Android/iOS).
-- **Tema Claro e Escuro:** Alterne entre os temas para uma leitura mais confortável a qualquer hora do dia.
-- **Instalável (PWA):** Adicione o MangaTrack à tela inicial do seu dispositivo para acesso rápido e uma experiência de tela cheia.
+- **Design Responsivo e Moderno:** Interface otimizada para uma experiência de uso agradável tanto em desktops quanto em dispositivos móveis.
+- **Tema Claro e Escuro:** Alterne entre os temas para uma leitura mais confortável.
+- **Instalável (PWA):** Adicione o MangaTrack à tela inicial do seu dispositivo para acesso rápido.
 
 ## 🚀 Tecnologias Utilizadas
 
@@ -25,6 +26,7 @@ O MangaTrack foi construído com um conjunto de tecnologias moderno e escalável
 - **Linguagem:** [TypeScript](https://www.typescriptlang.org/)
 - **Estilização:** [Tailwind CSS](https://tailwindcss.com/)
 - **Componentes UI:** [ShadCN UI](https://ui.shadcn.com/)
+- **IA e Busca Avançada:** [Google Gemini via Genkit](https://firebase.google.com/docs/genkit)
 - **Backend e Banco de Dados:** [Firebase](https://firebase.google.com/) (Authentication para usuários e Firestore como banco de dados NoSQL)
 - **Gráficos:** [Recharts](https://recharts.org/)
 - **Progressive Web App (PWA):** [next-pwa](https://www.npmjs.com/package/next-pwa)
@@ -53,7 +55,7 @@ Para que a aplicação se conecte ao Firebase, você precisa de um projeto Fireb
 1.  Acesse o [console do Firebase](https://console.firebase.google.com/) e crie um novo projeto.
 2.  Adicione um aplicativo da Web ao seu projeto.
 3.  Nas configurações do projeto, encontre suas credenciais de configuração do Firebase.
-4.  Crie um arquivo chamado `.env` na raiz do projeto e adicione suas credenciais, seguindo o formato do arquivo `.env.example` (que deve ser criado por você com o conteúdo abaixo).
+4.  Crie um arquivo chamado `.env` na raiz do projeto e adicione suas credenciais, usando o formato abaixo como modelo.
 
 **Conteúdo do arquivo `.env`:**
 ```
@@ -66,7 +68,7 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="12345..."
 NEXT_PUBLIC_FIREBASE_APP_ID="1:12345...:web:abcdef..."
 ```
 
-> **Atenção:** O arquivo `src/firebase/config.ts` utiliza essas variáveis para configurar o Firebase. Certifique-se de que os nomes das variáveis no `.env` correspondem aos usados no código.
+> **Atenção:** O arquivo `src/firebase/config.ts` utiliza essas variáveis para configurar o Firebase.
 
 ### 3. Instale as Dependências
 
