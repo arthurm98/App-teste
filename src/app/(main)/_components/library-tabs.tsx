@@ -8,22 +8,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function LibraryTabs() {
   const { library, isLoading } = useLibrary();
 
-  // 1. Completas: Obras finalizadas pela editora E que o usuário leu todos os capítulos.
+  // 1. Planejo Ler: Obras que o usuário não começou a ler.
+  const planejoLer = library.filter((m) => m.readChapters === 0);
+
+  // 2. Completas: Obras que o autor finalizou E que o usuário leu todos os capítulos.
   const completas = library.filter(m => 
     m.editorialStatus === 'Finalizado' && 
     m.totalChapters > 0 && 
-    m.readChapters === m.totalChapters
+    m.readChapters >= m.totalChapters
   );
-
-  // 2. Planejo Ler: Obras que o usuário não começou a ler.
-  const planejoLer = library.filter((m) => m.readChapters === 0);
-
-  // 3. Lendo: Todas as outras obras que o usuário já começou, mas que não estão na lista de completas.
+  
+  // 3. Lendo: Todas as outras obras que não estão em "Planejo Ler" ou "Completas".
   // Isso inclui obras "em dia" de séries em andamento.
   const lendo = library.filter(m => 
-    m.readChapters > 0 && 
+    !planejoLer.some(p => p.id === m.id) && 
     !completas.some(c => c.id === m.id)
   );
+
 
   if (isLoading) {
     return (

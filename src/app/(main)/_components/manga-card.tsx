@@ -34,8 +34,8 @@ export function MangaCard({ manga }: MangaCardProps) {
   const progress = progressDenominator > 0 ? (manga.readChapters / progressDenominator) * 100 : 0;
 
   const handleChapterChange = (amount: number) => {
-    // Garante que o progresso não ultrapasse o denominador de progresso
-    const newChapter = Math.max(0, Math.min(progressDenominator, manga.readChapters + amount));
+    // Garante que o progresso não seja menor que 0.
+    const newChapter = Math.max(0, manga.readChapters + amount);
     updateChapter(manga.id, newChapter);
   };
   
@@ -113,7 +113,7 @@ export function MangaCard({ manga }: MangaCardProps) {
                       <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleChapterChange(-1)} disabled={manga.readChapters <= 0}>
                           <Minus className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleChapterChange(1)} disabled={manga.readChapters >= progressDenominator}>
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleChapterChange(1)}>
                           <Plus className="h-4 w-4" />
                       </Button>
                   </div>
@@ -128,7 +128,7 @@ export function MangaCard({ manga }: MangaCardProps) {
            )}
           {manga.status === "Planejo Ler" && (
               <div className="mt-auto">
-                  <Button variant="secondary" className="w-full" onClick={() => handleStatusChange("Lendo")}>
+                  <Button variant="secondary" className="w-full" onClick={() => updateChapter(manga.id, 1)}>
                       <Plus className="mr-2 h-4 w-4" /> Começar a Ler
                   </Button>
               </div>
