@@ -4,14 +4,18 @@ export type MangaStatus = "Lendo" | "Planejo Ler" | "Completo";
 export type MangaType = "Mangá" | "Manhwa" | "Webtoon" | "Novel" | "Outro";
 
 /**
- * @fileoverview Defines the core data structure for a library item, governed by user authority.
+ * @fileoverview Defines the core data structure for a library item.
  *
- * HIERARCHY OF AUTHORITY (ABSOLUTE):
- * 1. User Action: The user has direct and final control.
- * 2. Library Status: The 'status' field, changed only by the user, dictates the tab.
- * 3. Progress Numbers: 'readChapters' and 'totalChapters' are user-editable data points.
- * 4. API Metadata: External data is for display only and never overrides user data.
- * 5. System Logic: The system must not infer or automate state changes.
+ * HIERARQUIA DE AUTORIDADE (ABSOLUTA):
+ * 1. Ação do Usuário: O usuário tem controle total e final sobre todos os dados.
+ * 2. Status da Biblioteca (`status`): Este campo define em qual aba a obra aparece.
+ *    Ele SÓ PODE ser alterado por uma ação explícita do usuário (botão, menu, etc.).
+ * 3. Progresso Numérico (`readChapters`, `totalChapters`): São dados informativos editáveis
+ *    pelo usuário. Eles NUNCA afetam o `status` da obra.
+ * 4. API Externa: Fornece apenas metadados iniciais (título, capa). NUNCA sobrepõe
+ *    dados do usuário nem altera o `status`.
+ * 5. Lógica do Sistema: O sistema NÃO PODE inferir, corrigir ou mover obras
+ *    automaticamente. Ele apenas reflete o estado definido pelo usuário.
  */
 export type Manga = {
   id: string;
@@ -19,28 +23,28 @@ export type Manga = {
   type: MangaType;
 
   /**
-   * Defines which library tab the work appears in ("Lendo", "Planejo Ler", "Completo").
-   * This field is changed ONLY by explicit user action (e.g., a button click).
-   * It is the single source of truth for tab placement.
+   * Define em qual aba a obra aparece ("Lendo", "Planejo Ler", "Completo").
+   * Este campo é a ÚNICA fonte da verdade para a organização das abas.
+   * É alterado APENAS por uma ação manual e explícita do usuário.
    */
   status: MangaStatus;
 
   /**
-   * The number of chapters the user has marked as read.
-   * This value is fully editable by the user and does not affect 'status'.
+   * O número de capítulos que o usuário marcou como lidos.
+   * Totalmente editável pelo usuário e NÃO afeta o `status`.
    */
   readChapters: number;
 
   /**
-   * The total number of chapters for the work, as defined by the user.
-   * This is used for progress calculation but does not affect 'status'.
+   * O número total de capítulos da obra, conforme definido pelo usuário.
+   * Usado para cálculo de progresso, mas NÃO afeta o `status`.
    */
   totalChapters: number;
-
+  
   /**
-   * The most recent chapter available, obtained from an API via manual sync.
-   * This field is for display/informational purposes only.
-   * It NEVER overrides 'totalChapters' or affects 'status'.
+   * O capítulo mais recente disponível, obtido da API via sincronização MANUAL.
+   * Este campo é apenas para fins informativos.
+   * NUNCA sobrepõe `totalChapters` ou afeta o `status`.
    */
   latestChapter: number;
 

@@ -32,7 +32,9 @@ function normalizeMangaType(type: string | null): MangaType {
     return 'Outro';
 }
 
-function normalizeEditorialStatus(status: string | null): string {
+// Esta função é usada apenas para exibição nos cards de busca.
+// Não é usada para armazenar o status na biblioteca.
+function normalizeDisplayStatus(status: string | null): string {
     const lowerStatus = status?.toLowerCase() || '';
     if (lowerStatus.includes('finished') || lowerStatus.includes('complete')) return 'Finalizado';
     if (lowerStatus.includes('releasing') || lowerStatus.includes('publishing') || lowerStatus.includes('current')) return 'Em Andamento';
@@ -61,7 +63,7 @@ function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
     title: manga.attributes.canonicalTitle,
     type: normalizeMangaType(manga.attributes.mangaType),
     chapters: manga.attributes.chapterCount,
-    status: normalizeEditorialStatus(manga.attributes.status),
+    status: normalizeDisplayStatus(manga.attributes.status),
     score: manga.attributes.averageRating ? parseFloat(manga.attributes.averageRating) / 10 : null,
     synopsis: manga.attributes.synopsis,
     genres: [], // A API de busca da Kitsu não inclui gêneros
@@ -80,7 +82,7 @@ function adaptAniListToJikan(manga: AniListManga): JikanManga {
         title: manga.title.romaji || manga.title.english || manga.title.native,
         type: normalizeMangaType(manga.format),
         chapters: manga.chapters,
-        status: normalizeEditorialStatus(manga.status),
+        status: normalizeDisplayStatus(manga.status),
         score: manga.averageScore ? manga.averageScore / 10 : null, // AniList score é de 0-100
         synopsis: manga.description,
         genres: manga.genres.map(genre => ({ mal_id: 0, type: 'manga', name: genre, url: '' })),
@@ -145,7 +147,7 @@ export default function SearchPage() {
             return jikanResults.map(m => ({
                 ...m, 
                 type: normalizeMangaType(m.type),
-                status: normalizeEditorialStatus(m.status)
+                status: normalizeDisplayStatus(m.status)
             }));
           }
           throw new Error(`Status: ${response.status}`);

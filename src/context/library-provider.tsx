@@ -28,7 +28,6 @@ export const LibraryContext = createContext<LibraryContextType | undefined>(unde
 const generateFallbackId = (title: string, type: MangaType) => `fb-${type.toLowerCase()}-${title.toLowerCase().replace(/\s+/g, '-')}`;
 const LOCAL_STORAGE_KEY = 'mangatrack-library';
 const NOTIFICATIONS_KEY = 'mangatrack-notifications';
-const LAST_CHECK_KEY = 'mangatrack-last-check';
 
 const addNotification = (mangaTitle: string, message: string) => {
     const newNotification: Notification = {
@@ -99,12 +98,12 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       const promises = mangasToCheck.map(mangaData => 
         getLatestMangaInfo(mangaData.id, mangaData.title).then(latestInfo => {
             if (latestInfo) {
-                // USER DATA WINS: A verificação da API só atualiza o `latestChapter`.
-                // NUNCA deve alterar status, readChapters ou totalChapters.
                 const apiLatestChapter = latestInfo.latestChapter || latestInfo.totalChapters;
                 
                 if (apiLatestChapter && apiLatestChapter > mangaData.latestChapter) {
                     updatesFound++;
+                    // A sincronização SÓ PODE atualizar metadados como `latestChapter`.
+                    // NUNCA deve alterar status, readChapters ou totalChapters definidos pelo usuário.
                     updateLibraryItem(mangaData.id, { latestChapter: apiLatestChapter });
                     addNotification(mangaData.title, `Novo capítulo detectado: ${apiLatestChapter}.`);
                 }
@@ -235,7 +234,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       id: mangaId,
       title: manga.title,
       type: mangaType,
-      status: "Planejo Ler",
+      status: "Planejo Ler", // Status inicial padrão
       imageUrl: manga.images.webp.large_image_url || manga.images.webp.image_url,
       totalChapters: manga.chapters || 0,
       readChapters: 0,
@@ -267,15 +266,15 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   }, [library, toast, user, firestore]);
 
   const updateChapter = useCallback((mangaId: string, newChapter: number) => {
-    // This function ONLY updates the number of chapters read.
-    // No other logic or status change is inferred.
+    // Esta função atualiza APENAS o número de capítulos lidos.
+    // Nenhuma outra lógica ou mudança de status deve ser inferida.
     const newRead = Math.max(0, newChapter);
     updateLibraryItem(mangaId, { readChapters: newRead });
   }, [updateLibraryItem]);
-
+  
   const updateStatus = useCallback((mangaId: string, newStatus: MangaStatus) => {
-    // This is the ONLY function that can change the tab (status) of a work.
-    // It is a manual and explicit user action. It must NOT infer any other changes.
+    // Esta é a ÚNICA função que pode mover uma obra entre abas (status).
+    // É uma ação manual e explícita do usuário. Não deve inferir outras mudanças.
     const manga = library.find(m => m.id === mangaId);
     if (!manga) return;
 
@@ -284,7 +283,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   }, [library, toast, updateLibraryItem]);
   
   const updateMangaDetails = useCallback((mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters'>>) => {
-     // This function saves the details edited by the user, without inferring status.
+     // Esta função salva os detalhes editados pelo usuário, sem inferir o status.
      const manga = library.find(m => m.id === mangaId);
      if (!manga) return;
      
