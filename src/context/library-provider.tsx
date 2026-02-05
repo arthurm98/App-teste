@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { collection, doc, onSnapshot, writeBatch, Timestamp, Firestore, Unsubscribe } from 'firebase/firestore';
-import { Manga, MangaStatus, MangaType } from '@/lib/data';
+import { Manga, MangaStatus, MangaType, EditorialStatus } from '@/lib/data';
 import { JikanManga } from '@/lib/jikan-data';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
@@ -10,9 +10,12 @@ import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlo
 import { getLatestMangaInfo } from '@/services/update-manga';
 import type { Notification } from '@/app/(main)/_components/notifications-log';
 
+// Estendemos o tipo esperado para incluir nosso campo normalizado
+type MangaWithEditorialStatus = JikanManga & { editorialStatus: EditorialStatus };
+
 interface LibraryContextType {
   library: Manga[];
-  addToLibrary: (manga: JikanManga) => void;
+  addToLibrary: (manga: MangaWithEditorialStatus) => void;
   removeFromLibrary: (mangaId: string) => void;
   updateChapter: (mangaId: string, newChapter: number) => void;
   updateStatus: (mangaId: string, newStatus: MangaStatus) => void;
@@ -257,7 +260,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     );
   }, [library]);
 
-  const addToLibrary = useCallback((manga: JikanManga) => {
+  const addToLibrary = useCallback((manga: MangaWithEditorialStatus) => {
     const mangaType = manga.type as MangaType;
 
     if (isMangaInLibrary(manga.mal_id, manga.title, mangaType)) {
@@ -272,7 +275,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     const newManga: Manga = {
       id: mangaId,
       title: manga.title,
-      type: mangaType, // O tipo já foi normalizado na busca
+      type: mangaType,
+      editorialStatus: manga.editorialStatus, // Salva o status de publicação
       status: "Planejo Ler",
       imageUrl: manga.images.webp.large_image_url || manga.images.webp.image_url,
       totalChapters: manga.chapters || 0,
@@ -308,10 +312,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     const manga = library.find(m => m.id === mangaId);
     if (!manga) return;
 
-    // Conforme a regra: esta função apenas atualiza o progresso numérico.
-    // Ela não deve inferir ou alterar o `status` da obra.
     const updates: Partial<Manga> = { readChapters: newChapter };
-    
     updateLibraryItem(mangaId, updates);
   }, [library, updateLibraryItem]);
 

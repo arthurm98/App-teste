@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -17,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MangaType } from "@/lib/data";
+import { MangaType, EditorialStatus } from "@/lib/data";
 
 type ApiSource = "Auto" | "Jikan" | "Kitsu" | "AniList";
 
@@ -33,7 +32,20 @@ function normalizeMangaType(type: string | null): MangaType {
     return 'Outro';
 }
 
-function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
+function normalizeEditorialStatus(status: string | null): EditorialStatus {
+    const lowerStatus = status?.toLowerCase() || '';
+    if (lowerStatus.includes('finished') || lowerStatus.includes('complete')) return 'Finalizado';
+    if (lowerStatus.includes('releasing') || lowerStatus.includes('publishing') || lowerStatus.includes('current')) return 'Em Andamento';
+    if (lowerStatus.includes('on hiatus')) return 'Pausado';
+    if (lowerStatus.includes('cancelled') || lowerStatus.includes('discontinued')) return 'Cancelado';
+    return 'Desconhecido';
+}
+
+// Estendemos o tipo JikanManga localmente para incluir nosso campo normalizado
+type AdaptedManga = JikanManga & { editorialStatus: EditorialStatus };
+
+
+function adaptKitsuToJikan(manga: KitsuManga): AdaptedManga {
   const imageUrl = manga.attributes.posterImage?.original || "";
   return {
     mal_id: 0, // Kitsu não fornece mal_id
@@ -54,13 +66,14 @@ function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
     type: normalizeMangaType(manga.attributes.mangaType),
     chapters: manga.attributes.chapterCount,
     status: manga.attributes.status,
+    editorialStatus: normalizeEditorialStatus(manga.attributes.status),
     score: manga.attributes.averageRating ? parseFloat(manga.attributes.averageRating) / 10 : null,
     synopsis: manga.attributes.synopsis,
     genres: [], // A API de busca da Kitsu não inclui gêneros
   };
 }
 
-function adaptAniListToJikan(manga: AniListManga): JikanManga {
+function adaptAniListToJikan(manga: AniListManga): AdaptedManga {
     const imageUrl = manga.coverImage.extraLarge || manga.coverImage.large || "";
     return {
         mal_id: manga.id, // AniList ID pode ser usado aqui
@@ -73,6 +86,7 @@ function adaptAniListToJikan(manga: AniListManga): JikanManga {
         type: normalizeMangaType(manga.format),
         chapters: manga.chapters,
         status: manga.status,
+        editorialStatus: normalizeEditorialStatus(manga.status),
         score: manga.averageScore ? manga.averageScore / 10 : null, // AniList score é de 0-100
         synopsis: manga.description,
         genres: manga.genres.map(genre => ({ mal_id: 0, type: 'manga', name: genre, url: '' })),
@@ -82,7 +96,7 @@ function adaptAniListToJikan(manga: AniListManga): JikanManga {
 export default function SearchPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<JikanManga[]>([]);
+  const [searchResults, setSearchResults] = useState<AdaptedManga[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -125,7 +139,7 @@ export default function SearchPage() {
       }
       
       setIsSearching(true);
-      let results: JikanManga[] = [];
+      let results: AdaptedManga[] = [];
       const failedApis: string[] = [];
 
       const searchJikan = async () => {
@@ -134,7 +148,11 @@ export default function SearchPage() {
           if (response.ok) {
             const data = await response.json();
             const jikanResults = (data.data || []) as JikanManga[];
-            return jikanResults.map(m => ({...m, type: normalizeMangaType(m.type)}));
+            return jikanResults.map(m => ({
+                ...m, 
+                type: normalizeMangaType(m.type),
+                editorialStatus: normalizeEditorialStatus(m.status)
+            }));
           }
           throw new Error(`Status: ${response.status}`);
         } catch (error) { 
@@ -231,7 +249,7 @@ export default function SearchPage() {
             searchAniList(),
         ]);
 
-        let combinedResults: JikanManga[] = [];
+        let combinedResults: AdaptedManga[] = [];
         allSearches.forEach(result => {
             if (result.status === 'fulfilled' && Array.isArray(result.value)) {
                 combinedResults.push(...result.value);
@@ -346,5 +364,3 @@ export default function SearchPage() {
   );
 
 }
-
-    

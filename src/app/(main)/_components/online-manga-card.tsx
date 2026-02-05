@@ -15,10 +15,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus, Check } from "lucide-react";
 import { useLibrary } from "@/hooks/use-library";
-import { MangaType } from "@/lib/data";
+import { MangaType, EditorialStatus } from "@/lib/data";
 
+// O tipo esperado agora inclui o `editorialStatus`
 interface OnlineMangaCardProps {
-  manga: JikanManga;
+  manga: JikanManga & { editorialStatus: EditorialStatus };
 }
 
 export function OnlineMangaCard({ manga }: OnlineMangaCardProps) {
@@ -63,11 +64,11 @@ export function OnlineMangaCard({ manga }: OnlineMangaCardProps) {
             {manga.score && (
                 <span>Nota: {manga.score.toFixed(2)}</span>
             )}
-            {manga.score && (manga.chapters || manga.status) ? ' • ' : ''}
+            {manga.score && (manga.chapters || manga.editorialStatus !== 'Desconhecido') ? ' • ' : ''}
             {manga.chapters && manga.chapters > 0 ? (
                 <span>{manga.chapters} caps</span>
             ) : (
-                manga.status && <span>{manga.status}</span>
+                manga.editorialStatus && <span>{manga.editorialStatus}</span>
             )}
            </div>
            <Button 

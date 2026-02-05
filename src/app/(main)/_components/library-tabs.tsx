@@ -9,19 +9,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function LibraryTabs() {
   const { library, isLoading } = useLibrary();
 
-  const reading = library.filter((m) => m.status === "Lendo");
-  const planToRead = library.filter((m) => m.status === "Planejo Ler");
-  const completed = library.filter((m) => m.status === "Completo");
+  // A lógica de filtragem agora é baseada no `editorialStatus` para as abas principais,
+  // e no `status` do usuário para a lista de planejamento.
+  const emAndamento = library.filter((m) => m.editorialStatus === "Em Andamento" && m.status !== 'Planejo Ler');
+  const finalizados = library.filter((m) => m.editorialStatus === "Finalizado" && m.status !== 'Planejo Ler');
+  const planejoLer = library.filter((m) => m.status === "Planejo Ler");
 
   if (isLoading) {
     return (
-      <Tabs defaultValue="reading">
+      <Tabs defaultValue="emAndamento">
          <TabsList className="grid w-full grid-cols-3 max-w-lg mb-6">
-          <TabsTrigger value="reading">Lendo (0)</TabsTrigger>
-          <TabsTrigger value="planToRead">Planejo Ler (0)</TabsTrigger>
-          <TabsTrigger value="completed">Completo (0)</TabsTrigger>
+          <TabsTrigger value="emAndamento">Em Andamento (0)</TabsTrigger>
+          <TabsTrigger value="finalizados">Finalizados (0)</TabsTrigger>
+          <TabsTrigger value="planejoLer">Planejo Ler (0)</TabsTrigger>
         </TabsList>
-         <TabsContent value="reading">
+         <TabsContent value="emAndamento">
            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
              {Array.from({ length: 6 }).map((_, i) => (
                <div key={i} className="flex flex-col gap-2">
@@ -37,43 +39,43 @@ export function LibraryTabs() {
   }
 
   return (
-      <Tabs defaultValue="reading">
+      <Tabs defaultValue="emAndamento">
         <TabsList className="grid w-full grid-cols-3 max-w-lg mb-6">
-          <TabsTrigger value="reading">Lendo ({reading.length})</TabsTrigger>
-          <TabsTrigger value="planToRead">Planejo Ler ({planToRead.length})</TabsTrigger>
-          <TabsTrigger value="completed">Completo ({completed.length})</TabsTrigger>
+          <TabsTrigger value="emAndamento">Em Andamento ({emAndamento.length})</TabsTrigger>
+          <TabsTrigger value="finalizados">Finalizados ({finalizados.length})</TabsTrigger>
+          <TabsTrigger value="planejoLer">Planejo Ler ({planejoLer.length})</TabsTrigger>
         </TabsList>
-        <TabsContent value="reading">
-          {reading.length > 0 ? (
+        <TabsContent value="emAndamento">
+          {emAndamento.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {reading.map((manga) => (
+              {emAndamento.map((manga) => (
                 <MangaCard key={manga.id} manga={manga} />
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-8">Nenhum título na sua lista de leitura.</p>
+            <p className="text-muted-foreground text-center py-8">Nenhum título em andamento na sua biblioteca.</p>
           )}
         </TabsContent>
-        <TabsContent value="planToRead">
-          {planToRead.length > 0 ? (
+        <TabsContent value="finalizados">
+          {finalizados.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {planToRead.map((manga) => (
+              {finalizados.map((manga) => (
+                <MangaCard key={manga.id} manga={manga} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">Nenhum título finalizado na sua biblioteca.</p>
+          )}
+        </TabsContent>
+        <TabsContent value="planejoLer">
+          {planejoLer.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {planejoLer.map((manga) => (
                 <MangaCard key={manga.id} manga={manga} />
               ))}
             </div>
           ) : (
             <p className="text-muted-foreground text-center py-8">Você não planeja ler nenhum título.</p>
-          )}
-        </TabsContent>
-        <TabsContent value="completed">
-          {completed.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {completed.map((manga) => (
-                <MangaCard key={manga.id} manga={manga} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center py-8">Você ainda não completou nenhum título.</p>
           )}
         </TabsContent>
       </Tabs>
