@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { collection, doc, onSnapshot, writeBatch, Timestamp, Firestore, Unsubscribe } from 'firebase/firestore';
-import { Manga, MangaStatus, MangaType, EditorialStatus } from '@/lib/data';
+import { Manga, MangaStatus, MangaType } from '@/lib/data';
 import { JikanManga } from '@/lib/jikan-data';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
@@ -10,12 +10,9 @@ import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlo
 import { getLatestMangaInfo } from '@/services/update-manga';
 import type { Notification } from '@/app/(main)/_components/notifications-log';
 
-// Estendemos o tipo esperado para incluir nosso campo normalizado
-type MangaWithEditorialStatus = JikanManga & { editorialStatus: EditorialStatus };
-
 interface LibraryContextType {
   library: Manga[];
-  addToLibrary: (manga: MangaWithEditorialStatus) => void;
+  addToLibrary: (manga: JikanManga) => void;
   removeFromLibrary: (mangaId: string) => void;
   updateChapter: (mangaId: string, newChapter: number) => void;
   updateStatus: (mangaId: string, newStatus: MangaStatus) => void;
@@ -224,7 +221,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     );
   }, [library]);
 
-  const addToLibrary = useCallback((manga: MangaWithEditorialStatus) => {
+  const addToLibrary = useCallback((manga: JikanManga) => {
     const mangaType = manga.type as MangaType;
 
     if (isMangaInLibrary(manga.mal_id, manga.title, mangaType)) {
@@ -238,7 +235,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       id: mangaId,
       title: manga.title,
       type: mangaType,
-      editorialStatus: manga.editorialStatus,
       status: "Planejo Ler",
       imageUrl: manga.images.webp.large_image_url || manga.images.webp.image_url,
       totalChapters: manga.chapters || 0,
@@ -271,35 +267,24 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   }, [library, toast, user, firestore]);
 
   const updateChapter = useCallback((mangaId: string, newChapter: number) => {
-    // Esta função agora APENAS atualiza o número de capítulos lidos.
-    // Nenhuma outra lógica ou mudança de status é inferida.
+    // This function ONLY updates the number of chapters read.
+    // No other logic or status change is inferred.
     const newRead = Math.max(0, newChapter);
     updateLibraryItem(mangaId, { readChapters: newRead });
   }, [updateLibraryItem]);
 
   const updateStatus = useCallback((mangaId: string, newStatus: MangaStatus) => {
-    // Esta é a única função que pode mudar a aba (status) de uma obra.
-    // É uma ação manual e explícita do usuário.
+    // This is the ONLY function that can change the tab (status) of a work.
+    // It is a manual and explicit user action. It must NOT infer any other changes.
     const manga = library.find(m => m.id === mangaId);
     if (!manga) return;
 
-    const updates: Partial<Manga> = { status: newStatus };
-    
-    // Pequenos atalhos de UX como conveniência, mas a ação principal é manual.
-    if (newStatus === "Completo" && manga.totalChapters > 0) {
-      updates.readChapters = manga.totalChapters;
-    } else if (newStatus === "Planejo Ler") {
-      updates.readChapters = 0;
-    } else if (newStatus === "Lendo" && manga.readChapters === 0) {
-      updates.readChapters = 1;
-    }
-
-    updateLibraryItem(mangaId, updates);
+    updateLibraryItem(mangaId, { status: newStatus });
     toast({ title: "Status Atualizado", description: `O status de "${manga.title}" foi alterado para ${newStatus}.` });
   }, [library, toast, updateLibraryItem]);
   
   const updateMangaDetails = useCallback((mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters'>>) => {
-     // Esta função salva os detalhes editados pelo usuário, sem inferir status.
+     // This function saves the details edited by the user, without inferring status.
      const manga = library.find(m => m.id === mangaId);
      if (!manga) return;
      
