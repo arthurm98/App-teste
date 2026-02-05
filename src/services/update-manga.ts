@@ -2,6 +2,7 @@
 import { JikanManga } from "@/lib/jikan-data";
 import { KitsuManga } from "@/lib/kitsu-data";
 import { AniListManga } from "@/lib/anilist-data";
+import { getLatestChapterAI } from "@/ai/flows/get-latest-chapter-flow";
 
 
 interface MangaUpdateInfo {
@@ -86,9 +87,9 @@ async function getInfoFromAniList(title: string): Promise<MangaUpdateInfo | null
 // Função principal que tenta buscar em várias APIs em cascata.
 export async function getLatestMangaInfo(mangaId: string, title: string): Promise<MangaUpdateInfo | null> {
     
-    console.log("Searching for manga updates using traditional APIs...");
+    console.log(`Searching for manga updates for "${title}" using traditional APIs...`);
 
-    const fallbackSearchers = [
+    const traditionalSearchers = [
         () => getInfoFromJikan('', title),
         () => getInfoFromKitsu(title),
         () => getInfoFromAniList(title),
@@ -97,23 +98,44 @@ export async function getLatestMangaInfo(mangaId: string, title: string): Promis
     // Tenta a fonte primária (Jikan/Anilist ID se for um número)
     if (!isNaN(Number(mangaId))) {
         const primaryInfo = await getInfoFromJikan(mangaId);
-        if (primaryInfo) return primaryInfo;
+        if (primaryInfo && (primaryInfo.totalChapters || primaryInfo.latestChapter)) {
+             console.log(`Primary search successful for "${title}" using ID ${mangaId}.`);
+            return primaryInfo;
+        }
     }
     
     // Se a fonte primária falhar ou não for aplicável, itera sobre os fallbacks
-    for (const searcher of fallbackSearchers) {
+    for (const searcher of traditionalSearchers) {
         try {
             const result = await searcher();
             if (result && (result.totalChapters || result.latestChapter)) {
-                console.log(`Fallback successful for "${title}"`);
+                console.log(`Traditional fallback successful for "${title}"`);
                 return result;
             }
         } catch (error) {
             // Apenas loga o erro e continua para a próxima API
-            console.warn(`A fallback searcher failed for "${title}"`, error);
+            console.warn(`A traditional searcher failed for "${title}"`, error);
         }
     }
 
-    console.log(`All update checks failed for "${title}".`);
+    // Se todas as APIs tradicionais falharem, usa o fluxo de IA como fallback final
+    console.log(`All traditional APIs failed for "${title}". Falling back to AI search...`);
+    try {
+        const aiResult = await getLatestChapterAI({ title });
+        if (aiResult && aiResult.latestChapter) {
+            console.log(`AI search successful for "${title}": Found chapter ${aiResult.latestChapter}. Reasoning: ${aiResult.reasoning}`);
+            return {
+                totalChapters: aiResult.latestChapter, // A IA nos dá o mais recente, que podemos usar como total para fins de progresso
+                latestChapter: aiResult.latestChapter,
+            };
+        } else if (aiResult) {
+             console.log(`AI search could not find a definitive chapter for "${title}". Reasoning: ${aiResult.reasoning}`);
+        }
+    } catch (error) {
+        console.error(`AI flow failed for title "${title}":`, error);
+    }
+
+
+    console.log(`All update checks (including AI) failed for "${title}".`);
     return null;
 }
