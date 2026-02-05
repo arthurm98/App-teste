@@ -3,32 +3,13 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { Input } from "@/components/ui/input";
-import { Search as SearchIcon, BrainCircuit } from "lucide-react";
+import { Search as SearchIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { JikanManga } from "@/lib/jikan-data";
 import { OnlineMangaCard } from "../_components/online-manga-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { searchManga } from "@/ai/flows/search-manga-flow";
-import { isAiAvailable } from "@/ai/config";
 
-
-const CACHE_PREFIX = "mangatrack_ai_search_";
-
-// Helper to adapt AI output to JikanManga type if needed, though they should be compatible
-function adaptAiResultToJikan(aiResult: any): JikanManga {
-  return {
-    ...aiResult,
-    images: {
-      ...aiResult.images,
-      jpg: { // Ensure jpg property exists for compatibility
-        image_url: aiResult.images.webp.image_url,
-        small_image_url: aiResult.images.webp.image_url,
-        large_image_url: aiResult.images.webp.large_image_url,
-      }
-    }
-  };
-}
-
+const API_URL = "https://api.jikan.moe/v4/manga";
 
 export default function SearchPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,59 +34,31 @@ export default function SearchPage() {
   }, [searchTerm]);
 
   useEffect(() => {
-    if (!isAiAvailable) return;
-
     const fetchMangas = async () => {
       if (debouncedSearchTerm.trim().length < 3) {
         setSearchResults([]);
         return;
       }
-
-      const cacheKey = `${CACHE_PREFIX}${debouncedSearchTerm.trim().toLowerCase()}`;
-      try {
-        const cachedData = sessionStorage.getItem(cacheKey);
-        if (cachedData) {
-          console.log("Servindo resultados do cache para:", debouncedSearchTerm);
-          startTransition(() => {
-             setSearchResults(JSON.parse(cachedData));
-          });
-          return;
-        }
-      } catch (error) {
-        console.warn("Não foi possível ler o cache da sessão:", error);
-      }
       
       setIsSearching(true);
       
       try {
-        const aiResponse = await searchManga(debouncedSearchTerm.trim());
-        const results = aiResponse.results.map(adaptAiResultToJikan);
-
-        if (results.length === 0) {
-            toast({
-             variant: "destructive",
-             title: "Nenhum Resultado",
-             description: "A busca com IA não encontrou títulos com esse termo. Tente outra palavra-chave.",
-           });
+        const response = await fetch(`${API_URL}?q=${encodeURIComponent(debouncedSearchTerm)}&limit=18`);
+        if (!response.ok) {
+            throw new Error(`A API Jikan respondeu com o status: ${response.status}`);
         }
-
+        const searchData = await response.json();
+        
         startTransition(() => {
-            setSearchResults(results);
-            if (results.length > 0) {
-              try {
-                sessionStorage.setItem(cacheKey, JSON.stringify(results));
-              } catch (error) {
-                console.warn("Não foi possível escrever no cache da sessão:", error);
-              }
-            }
+            setSearchResults(searchData.data || []);
         });
 
-      } catch (error) {
-        console.error("AI search flow failed:", error);
+      } catch (error: any) {
+        console.error("Jikan API search failed:", error);
         toast({
             variant: "destructive",
             title: "Erro na Busca",
-            description: "Ocorreu um erro ao usar a busca com IA. Por favor, tente novamente."
+            description: error.message || "Ocorreu um erro ao buscar na API Jikan. Tente novamente mais tarde."
         })
       } finally {
         setIsSearching(false);
@@ -115,18 +68,6 @@ export default function SearchPage() {
     fetchMangas();
   }, [debouncedSearchTerm, toast]);
 
-  if (!isAiAvailable) {
-    return (
-        <div className="container mx-auto text-center py-10">
-            <h1 className="text-3xl font-headline font-bold mb-4">Busca com IA Desativada</h1>
-            <p className="text-muted-foreground max-w-md mx-auto">
-                Para ativar a busca online, você precisa configurar sua chave de API do Google Gemini.
-                Adicione a variável de ambiente <code className="bg-muted text-foreground px-1 py-0.5 rounded">GEMINI_API_KEY</code> ao seu arquivo <code className="bg-muted text-foreground px-1 py-0.5 rounded">.env</code> e reinicie o servidor.
-            </p>
-        </div>
-    );
-  }
-
   const isLoading = isSearching || isPending;
 
   return (
@@ -135,9 +76,8 @@ export default function SearchPage() {
         <h1 className="text-3xl font-headline font-bold">
           Buscar Títulos Online
         </h1>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2 sm:mt-0">
-            <BrainCircuit className="h-4 w-4 text-primary" />
-            <span>Busca com Inteligência Artificial</span>
+         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2 sm:mt-0">
+            <span>Fonte: Jikan API (MyAnimeList)</span>
         </div>
       </div>
       <div className="flex gap-4 mb-8">

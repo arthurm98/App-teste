@@ -6,8 +6,7 @@ export type MangaType = "Mangá" | "Manhwa" | "Webtoon" | "Novel" | "Outro";
 
 /**
  * Representa um título na biblioteca do usuário.
- * A organização nas abas (status) é 100% controlada pelo usuário.
- * Nenhuma lógica automática deve alterar o campo 'status'.
+ * O controle sobre o status e progresso é 100% manual.
  */
 export type Manga = {
   id: string;
@@ -21,9 +20,6 @@ export type Manga = {
   
   /** O número de capítulos que o usuário marcou como lido. */
   readChapters: number;
-  
-  /** O capítulo mais recente lançado, obtido via API. Serve apenas como informação. */
-  latestChapter: number;
   
   genres: string[];
   imageUrl?: string;

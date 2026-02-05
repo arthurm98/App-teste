@@ -29,22 +29,19 @@ export function EditMangaDialog({ isOpen, onOpenChange, manga }: EditMangaDialog
   
   const [readChapters, setReadChapters] = useState(manga.readChapters);
   const [totalChapters, setTotalChapters] = useState(manga.totalChapters);
-  const [latestChapter, setLatestChapter] = useState(manga.latestChapter);
 
   useEffect(() => {
     if (isOpen) {
       setReadChapters(manga.readChapters);
       setTotalChapters(manga.totalChapters);
-      setLatestChapter(manga.latestChapter);
     }
   }, [isOpen, manga]);
 
   const handleSave = () => {
     const newRead = Number(readChapters);
     const newTotal = Number(totalChapters);
-    const newLatest = Number(latestChapter);
 
-    if (isNaN(newRead) || isNaN(newTotal) || isNaN(newLatest) || newRead < 0 || newTotal < 0 || newLatest < 0) {
+    if (isNaN(newRead) || isNaN(newTotal) || newRead < 0 || newTotal < 0) {
       toast({
         variant: "destructive",
         title: "Valores Inválidos",
@@ -53,11 +50,9 @@ export function EditMangaDialog({ isOpen, onOpenChange, manga }: EditMangaDialog
       return;
     }
     
-    // Nenhuma validação automática. O usuário tem autoridade total.
     updateMangaDetails(manga.id, { 
       readChapters: newRead,
       totalChapters: newTotal,
-      latestChapter: newLatest,
     });
     onOpenChange(false);
   };
@@ -68,7 +63,7 @@ export function EditMangaDialog({ isOpen, onOpenChange, manga }: EditMangaDialog
         <DialogHeader>
           <DialogTitle className="font-headline">Editar {manga.title}</DialogTitle>
           <DialogDescription>
-            Você tem controle total. Altere os valores como desejar.
+            Altere os valores de capítulos lidos e totais.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -94,19 +89,6 @@ export function EditMangaDialog({ isOpen, onOpenChange, manga }: EditMangaDialog
               type="number"
               value={totalChapters}
               onChange={(e) => setTotalChapters(Number(e.target.value))}
-              className="col-span-3"
-              min="0"
-            />
-          </div>
-           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="latestChapter" className="text-right">
-              Último Cap. (API)
-            </Label>
-            <Input
-              id="latestChapter"
-              type="number"
-              value={latestChapter}
-              onChange={(e) => setLatestChapter(Number(e.target.value))}
               className="col-span-3"
               min="0"
             />

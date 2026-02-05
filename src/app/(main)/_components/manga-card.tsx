@@ -30,13 +30,10 @@ export function MangaCard({ manga }: MangaCardProps) {
 
   const imageUrl = manga.imageUrl || "https://picsum.photos/seed/placeholder/400/600";
   
-  // A barra de progresso agora usa o totalChapters definido pelo usuário.
-  // latestChapter é apenas informativo.
-  const progressDenominator = manga.totalChapters > 0 ? manga.totalChapters : (manga.latestChapter > 0 ? manga.latestChapter : 0);
+  const progressDenominator = manga.totalChapters > 0 ? manga.totalChapters : 0;
   const progress = progressDenominator > 0 ? (manga.readChapters / progressDenominator) * 100 : 0;
 
   const handleChapterChange = (amount: number) => {
-    // O usuário tem controle total para incrementar e decrementar, exceto para valores negativos.
     const newChapter = Math.max(0, manga.readChapters + amount);
     updateChapter(manga.id, newChapter);
   };

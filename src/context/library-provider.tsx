@@ -8,8 +8,6 @@ import { JikanManga } from '@/lib/jikan-data';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { getLatestMangaInfo } from '@/services/update-manga';
-import type { Notification } from '@/app/(main)/_components/notifications-log';
 
 interface LibraryContextType {
   library: Manga[];
@@ -19,8 +17,7 @@ interface LibraryContextType {
   updateStatus: (mangaId: string, newStatus: MangaStatus) => void;
   isMangaInLibrary: (mangaId: number, title?: string) => boolean;
   restoreLibrary: (newLibrary: Manga[]) => void;
-  updateMangaDetails: (mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters' | 'latestChapter'>>) => void;
-  triggerUpdateCheck: () => void;
+  updateMangaDetails: (mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters'>>) => void;
   isLoading: boolean;
 }
 
@@ -28,35 +25,12 @@ export const LibraryContext = createContext<LibraryContextType | undefined>(unde
 
 const generateFallbackId = (title: string) => `fb-${title.toLowerCase().replace(/\s+/g, '-')}`;
 const LOCAL_STORAGE_KEY = 'mangatrack-library';
-const NOTIFICATIONS_KEY = 'mangatrack-notifications';
-const UPDATE_INTERVAL_DAYS = 7;
-const LAST_CHECK_KEY = 'mangatrack-last-check';
-
-const addNotification = (mangaTitle: string, message: string) => {
-    const newNotification: Notification = {
-        id: `${mangaTitle}-${new Date().getTime()}`,
-        mangaTitle,
-        message,
-        date: new Date().toISOString(),
-    };
-    try {
-        const existing = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]') as Notification[];
-        const updated = [newNotification, ...existing].slice(0, 50); // Limita a 50 notificações
-        localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updated));
-        // Dispara um evento para que outros componentes (como o log) possam reagir
-        window.dispatchEvent(new Event('storage'));
-    } catch (e) {
-        console.error("Falha ao salvar notificação", e);
-    }
-};
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const [localLibrary, setLocalLibrary] = useState<Manga[]>([]);
   const [cloudLibrary, setCloudLibrary] = useState<Manga[]>([]);
   const [isLocalLoaded, setIsLocalLoaded] = useState(false);
   const [isCloudLoading, setIsCloudLoading] = useState(true);
-  const [forceCheck, setForceCheck] = useState(false);
-
 
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
@@ -87,57 +61,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
   }, [localLibrary, isLocalLoaded, user]);
 
-  const updateLibraryItem = useCallback((mangaId: string, updates: Partial<Manga>) => {
-     if (user && !user.isAnonymous && firestore) {
-      const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
-      updateDocumentNonBlocking(docRef, { ...updates, updatedAt: Timestamp.now() });
-    } else {
-      setLocalLibrary(prev => prev.map(m => m.id === mangaId ? { ...m, ...updates, updatedAt: Timestamp.now() } : m));
-    }
-  }, [user, firestore]);
-  
-  const performUpdateCheck = useCallback((mangasToCheck: Manga[]) => {
-      console.log(`Iniciando verificação de ${mangasToCheck.length} mangás...`);
-      let updatesFound = 0;
-
-      const promises = mangasToCheck.map(mangaData => 
-        getLatestMangaInfo(mangaData.id, mangaData.title).then(latestInfo => {
-            if (latestInfo) {
-                const currentLatest = mangaData.latestChapter || 0;
-                let hasUpdate = false;
-                const updates: Partial<Manga> = {};
-                let notificationMessage = '';
-
-                if (latestInfo.latestChapter && latestInfo.latestChapter > currentLatest) {
-                    updates.latestChapter = latestInfo.latestChapter;
-                    hasUpdate = true;
-                    notificationMessage = `Novo capítulo detectado: ${latestInfo.latestChapter}.`;
-                }
-                
-                if (hasUpdate) {
-                    updatesFound++;
-                    updateLibraryItem(mangaData.id, updates);
-                    addNotification(mangaData.title, notificationMessage);
-                }
-            }
-        })
-      );
-      
-      Promise.all(promises).then(() => {
-        if (updatesFound > 0) {
-            toast({
-                title: "Novos Capítulos Encontrados",
-                description: `A verificação encontrou atualizações para ${updatesFound} título(s). Confira o log de notificações.`,
-            });
-        }
-        localStorage.setItem(LAST_CHECK_KEY, new Date().toISOString());
-        console.log("Verificação de atualização concluída.");
-      });
-
-  }, [updateLibraryItem, toast]);
-
-
-  // Cloud library listener & weekly update
+  // Cloud library listener
   useEffect(() => {
     let unsubscribe: Unsubscribe | undefined;
     if (user && !user.isAnonymous && firestore) {
@@ -147,26 +71,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         const cloudData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Manga));
         setCloudLibrary(cloudData);
         setIsCloudLoading(false);
-
-        const lastCheck = localStorage.getItem(LAST_CHECK_KEY);
-        let shouldCheck = forceCheck; // Usar o estado para forçar
-        if (!shouldCheck && !lastCheck) {
-            shouldCheck = true; // Primeira verificação
-        } else if (!shouldCheck && lastCheck) {
-            const lastCheckDate = new Date(lastCheck);
-            const now = new Date();
-            const diffDays = (now.getTime() - lastCheckDate.getTime()) / (1000 * 60 * 60 * 24);
-            if (diffDays > UPDATE_INTERVAL_DAYS) {
-                shouldCheck = true;
-            }
-        }
-        
-        if (shouldCheck && cloudData.length > 0) {
-            const mangasToUpdate = cloudData.filter(m => m.status !== 'Completo');
-            performUpdateCheck(mangasToUpdate);
-            if(forceCheck) setForceCheck(false); // Reseta o gatilho
-        }
-
       }, error => {
         const contextualError = new FirestorePermissionError({
             operation: 'list',
@@ -185,7 +89,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       setIsCloudLoading(false);
     }
     return () => unsubscribe?.();
-  }, [user, firestore, toast, performUpdateCheck, forceCheck]);
+  }, [user, firestore, toast]);
 
   // Sync local to cloud on login
   useEffect(() => {
@@ -240,7 +144,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const library = useMemo(() => (!user || user.isAnonymous ? localLibrary : cloudLibrary), [user, cloudLibrary, localLibrary]);
   const isLoading = useMemo(() => isUserLoading || (!user ? !isLocalLoaded : isCloudLoading), [user, isUserLoading, isCloudLoading, isLocalLoaded]);
 
-
   const isMangaInLibrary = useCallback((mangaId: number, title?: string) => {
     const checkId = mangaId > 0 ? String(mangaId) : generateFallbackId(title || '');
     return library.some(m => m.id === checkId);
@@ -257,12 +160,11 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     const newManga: Manga = {
       id: mangaId,
       title: manga.title,
-      type: manga.type as MangaType,
+      type: (manga.type || "Outro") as MangaType,
       status: "Planejo Ler",
       imageUrl: manga.images.webp.large_image_url || manga.images.webp.image_url,
       totalChapters: manga.chapters || 0,
       readChapters: 0,
-      latestChapter: manga.chapters || 0,
       genres: manga.genres.map(g => g.name),
       createdAt: now,
       updatedAt: now,
@@ -290,24 +192,40 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   }, [library, toast, user, firestore]);
 
   const updateChapter = useCallback((mangaId: string, newChapter: number) => {
-    const updates: Partial<Manga> = { readChapters: newChapter };
-    updateLibraryItem(mangaId, updates);
-  }, [updateLibraryItem]);
+    const updates: Partial<Manga> = { readChapters: newChapter, updatedAt: Timestamp.now() };
+    if (user && !user.isAnonymous && firestore) {
+      const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
+      updateDocumentNonBlocking(docRef, updates);
+    } else {
+      setLocalLibrary(prev => prev.map(m => m.id === mangaId ? { ...m, ...updates } : m));
+    }
+  }, [user, firestore]);
 
   const updateStatus = useCallback((mangaId: string, newStatus: MangaStatus) => {
     const manga = library.find(m => m.id === mangaId);
     if (!manga) return;
-    const updates: Partial<Manga> = { status: newStatus };
-    updateLibraryItem(mangaId, updates);
+    const updates: Partial<Manga> = { status: newStatus, updatedAt: Timestamp.now() };
+    if (user && !user.isAnonymous && firestore) {
+        const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
+        updateDocumentNonBlocking(docRef, updates);
+    } else {
+        setLocalLibrary(prev => prev.map(m => m.id === mangaId ? { ...m, ...updates } : m));
+    }
     toast({ title: "Status Atualizado", description: `O status de "${manga.title}" foi alterado para ${newStatus}.` });
-  }, [library, toast, updateLibraryItem]);
+  }, [library, toast, user, firestore]);
   
-  const updateMangaDetails = useCallback((mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters' | 'latestChapter'>>) => {
+  const updateMangaDetails = useCallback((mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters'>>) => {
      const manga = library.find(m => m.id === mangaId);
      if (!manga) return;
-     updateLibraryItem(mangaId, details);
+     const updates = { ...details, updatedAt: Timestamp.now() };
+     if (user && !user.isAnonymous && firestore) {
+        const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
+        updateDocumentNonBlocking(docRef, updates);
+     } else {
+        setLocalLibrary(prev => prev.map(m => m.id === mangaId ? { ...m, ...updates } : m));
+     }
      toast({ title: "Detalhes Atualizados", description: `As informações de "${manga.title}" foram salvas.` });
-  }, [library, toast, updateLibraryItem]);
+  }, [library, toast, user, firestore]);
 
   const restoreLibrary = useCallback((newLibrary: Manga[]) => {
     if (!user || user.isAnonymous) {
@@ -322,12 +240,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
   }, [user, toast]);
 
-  const triggerUpdateCheck = useCallback(() => {
-    setForceCheck(true);
-  }, []);
-
   return (
-    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails, isLoading, triggerUpdateCheck }}>
+    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails, isLoading }}>
       {children}
     </LibraryContext.Provider>
   );

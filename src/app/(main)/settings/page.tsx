@@ -3,8 +3,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsContent } from "../_components/settings-content";
-import { NotificationsLog } from "../_components/notifications-log";
-import { Separator } from "@/components/ui/separator";
 
 export default function SettingsPage() {
     return (
@@ -15,25 +13,13 @@ export default function SettingsPage() {
                     <CardHeader>
                         <CardTitle className="font-headline">Backup e Restauração</CardTitle>
                         <CardDescription>
-                            Faça backup dos dados da sua biblioteca ou restaure a partir de um arquivo de backup anterior. A restauração só funciona no modo offline.
+                            Faça backup dos dados da sua biblioteca ou restaure a partir de um arquivo de backup anterior. A restauração só funciona no modo offline (sem conta).
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <SettingsContent />
                     </CardContent>
                 </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="font-headline">Sincronização de Capítulos</CardTitle>
-                        <CardDescription>
-                            O aplicativo verifica automaticamente por novos capítulos uma vez por semana. Você também pode forçar uma verificação manual para toda a sua biblioteca.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <SettingsContent showSyncOptions />
-                    </CardContent>
-                </Card>
-                <NotificationsLog />
             </div>
         </div>
     );
