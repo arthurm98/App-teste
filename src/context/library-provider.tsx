@@ -20,6 +20,7 @@ interface LibraryContextType {
   updateMangaDetails: (mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters'>>) => void;
   isLoading: boolean;
   syncLocalDataToCloud: () => Promise<void>;
+  checkForUpdates: (mangaId: string) => Promise<void>;
 }
 
 export const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
@@ -198,6 +199,44 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     return library.some(m => m.id === checkId);
   }, [library]);
 
+  const updateStatus = useCallback((mangaId: string, newStatus: MangaStatus) => {
+    const manga = library.find(m => m.id === mangaId);
+    if (!manga) return;
+    const updates: Partial<Manga> = { status: newStatus, updatedAt: Timestamp.now() };
+    if (user && firestore) {
+        const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
+        updateDocumentNonBlocking(docRef, updates);
+    } else {
+        setLocalLibrary(prev => prev.map(m => m.id === mangaId ? { ...m, ...updates } : m));
+    }
+    toast({ title: "Status Atualizado", description: `O status de "${manga.title}" foi alterado para ${newStatus}.` });
+  }, [library, toast, user, firestore]);
+
+  const updateChapter = useCallback((mangaId: string, newChapter: number) => {
+    const mangaToUpdate = library.find(m => m.id === mangaId);
+    if (!mangaToUpdate) return;
+    
+    const updates: Partial<Manga> = { readChapters: newChapter, updatedAt: Timestamp.now() };
+    
+    if (user && firestore) {
+      const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
+      updateDocumentNonBlocking(docRef, updates);
+    } else {
+      setLocalLibrary(prev => prev.map(m => m.id === mangaId ? { ...m, ...updates } : m));
+    }
+    
+    // Automatic status update to "Completo"
+    if (
+        mangaToUpdate.publicationStatus === 'Finished' &&
+        mangaToUpdate.totalChapters > 0 &&
+        newChapter >= mangaToUpdate.totalChapters &&
+        mangaToUpdate.status !== 'Completo'
+    ) {
+        updateStatus(mangaId, 'Completo');
+    }
+
+  }, [user, firestore, library, updateStatus]);
+
   const addToLibrary = useCallback((manga: JikanManga) => {
     if (isMangaInLibrary(manga.mal_id, manga.title)) {
       toast({ title: "Já está na biblioteca", description: `${manga.title} já foi adicionado.` });
@@ -248,29 +287,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       toast({ title: "Removido da Biblioteca", description: `${manga.title} foi removido.`, variant: "destructive" });
     }
   }, [library, toast, user, firestore]);
-
-  const updateChapter = useCallback((mangaId: string, newChapter: number) => {
-    const updates: Partial<Manga> = { readChapters: newChapter, updatedAt: Timestamp.now() };
-    if (user && firestore) {
-      const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
-      updateDocumentNonBlocking(docRef, updates);
-    } else {
-      setLocalLibrary(prev => prev.map(m => m.id === mangaId ? { ...m, ...updates } : m));
-    }
-  }, [user, firestore]);
-
-  const updateStatus = useCallback((mangaId: string, newStatus: MangaStatus) => {
-    const manga = library.find(m => m.id === mangaId);
-    if (!manga) return;
-    const updates: Partial<Manga> = { status: newStatus, updatedAt: Timestamp.now() };
-    if (user && firestore) {
-        const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
-        updateDocumentNonBlocking(docRef, updates);
-    } else {
-        setLocalLibrary(prev => prev.map(m => m.id === mangaId ? { ...m, ...updates } : m));
-    }
-    toast({ title: "Status Atualizado", description: `O status de "${manga.title}" foi alterado para ${newStatus}.` });
-  }, [library, toast, user, firestore]);
   
   const updateMangaDetails = useCallback((mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters'>>) => {
      const manga = library.find(m => m.id === mangaId);
@@ -303,8 +319,51 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
   }, [user, toast]);
 
+  const checkForUpdates = useCallback(async (mangaId: string) => {
+    const manga = library.find(m => m.id === mangaId);
+    if (!manga) return;
+
+    if (manga.id.startsWith('fb-')) {
+        toast({
+            variant: "default",
+            title: "Verificação Indisponível",
+            description: "Obras adicionadas manualmente não podem ser verificadas.",
+        });
+        return;
+    }
+
+    try {
+        const response = await fetch(`https://api.jikan.moe/v4/manga/${mangaId}`);
+        if (!response.ok) {
+            throw new Error(`API Jikan respondeu com status ${response.status}`);
+        }
+        const { data: jikanManga } = await response.json();
+        const onlineChapters = jikanManga.chapters || 0;
+
+        if (onlineChapters > 0 && onlineChapters !== manga.totalChapters) {
+            updateMangaDetails(mangaId, { totalChapters: onlineChapters });
+            toast({
+                title: "Total de Capítulos Atualizado!",
+                description: `O total de capítulos de "${manga.title}" foi atualizado para ${onlineChapters}.`,
+            });
+        } else {
+            toast({
+                title: "Nenhuma Atualização",
+                description: "O total de capítulos já está em dia.",
+            });
+        }
+    } catch (error: any) {
+        console.error("Erro ao verificar capítulos:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro na Verificação",
+            description: error.message || "Não foi possível conectar à API Jikan.",
+        });
+    }
+  }, [library, toast, updateMangaDetails]);
+
   return (
-    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails, isLoading, syncLocalDataToCloud }}>
+    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails, isLoading, syncLocalDataToCloud, checkForUpdates }}>
       {children}
     </LibraryContext.Provider>
   );
