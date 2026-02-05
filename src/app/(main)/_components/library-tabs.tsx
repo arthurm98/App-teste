@@ -9,7 +9,7 @@ export function LibraryTabs() {
   const { library, isLoading } = useLibrary();
 
   // A lógica de filtragem agora é baseada diretamente no status da obra,
-  // que é atualizado automaticamente pelo LibraryProvider.
+  // que é atualizado manualmente pelo usuário.
   const lendo = library.filter((m) => m.status === 'Lendo');
   const completas = library.filter((m) => m.status === 'Completo');
   const planejoLer = library.filter((m) => m.status === 'Planejo Ler');

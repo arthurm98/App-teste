@@ -4,20 +4,11 @@ export type MangaStatus = "Lendo" | "Planejo Ler" | "Completo";
 export type MangaType = "Mangá" | "Manhwa" | "Webtoon" | "Novel" | "Outro";
 export type EditorialStatus = 'Em Andamento' | 'Finalizado' | 'Pausado' | 'Cancelado' | 'Desconhecido';
 
-
 /**
- * REGRA DE OURO: O status da obra na biblioteca (`status`) é totalmente independente do
- * seu progresso numérico e de seu status de publicação (`editorialStatus`).
- *
- * - `editorialStatus`: Define se a obra foi concluída pelo autor (Finalizado) ou se ainda está
- *   sendo publicada (Em Andamento). Este campo controla em qual aba principal a obra aparece.
- *
- * - `status`: É uma etiqueta pessoal do usuário. "Completo" aqui significa "terminei de ler",
- *   "Lendo" significa "estou lendo ativamente", e "Planejo Ler" é uma lista de interesse.
- *   Este campo NÃO move a obra entre as abas "Em Andamento" e "Finalizados".
- *
- * - O progresso numérico (readChapters / latestChapter) é apenas um dado informativo e
- *   NUNCA deve alterar o `status` ou o `editorialStatus` de uma obra.
+ * @fileoverview Este arquivo define a estrutura de dados principal para um item da biblioteca.
+ * 
+ * REGRA DE HIERARQUIA: Usuário > UI > API > Lógica do Sistema.
+ * A intenção do usuário é a fonte final da verdade.
  */
 export type Manga = {
   id: string;
@@ -25,20 +16,21 @@ export type Manga = {
   type: MangaType;
   
   /**
-   * O status de publicação da obra, conforme retornado pela API.
-   * Fonte da verdade para as abas "Em Andamento" e "Finalizados".
+   * O status de publicação da obra, conforme retornado pela API (ex: 'Em Andamento', 'Finalizado').
+   * Este campo é puramente informativo e NUNCA deve ser usado para mover uma obra entre abas.
    */
   editorialStatus: EditorialStatus;
 
   /**
-   * Etiqueta de leitura pessoal do usuário. "Completo" aqui significa que o USUÁRIO terminou de ler.
-   * Não confunda com a obra ter sido finalizada pelo autor.
+   * A etiqueta de leitura pessoal do usuário, que define em qual aba a obra aparece.
+   * Este campo é 100% controlado pelo usuário através da interface.
+   * 'Lendo', 'Completo', 'Planejo Ler' são intenções do usuário, não estados inferidos.
    */
   status: MangaStatus;
   
   /**
-   * O número total de capítulos de uma obra CONCLUÍDA.
-   * Este valor é geralmente definido pelo usuário ou por uma API para obras finalizadas.
+   * O número total de capítulos, definido pelo usuário.
+   * Este valor tem prioridade sobre qualquer dado da API e é editável a qualquer momento.
    */
   totalChapters: number;
   
@@ -49,10 +41,9 @@ export type Manga = {
   readChapters: number;
   
   /**
-   * O capítulo mais recente DISPONÍVEL da obra, obtido via API.
-   * Representa a disponibilidade atual, não a conclusão. Para obras em andamento,
-   * este valor pode aumentar com o tempo. É usado como o denominador no cálculo
-   * de progresso (Ex: 120 / 150).
+   * O capítulo mais recente disponível, obtido via API pela sincronização manual.
+   * Este campo é apenas para exibição e referência.
+   * NUNCA deve sobrescrever 'totalChapters' nem ser usado para lógica de classificação.
    */
   latestChapter: number;
   
