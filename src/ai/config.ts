@@ -1,2 +1,1 @@
-
-export const isAiAvailable = !!process.env.GEMINI_API_KEY;
+// This file has been intentionally emptied to remove AI functionality and prevent errors.
