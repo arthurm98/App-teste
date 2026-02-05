@@ -8,7 +8,6 @@ import { JikanManga } from '@/lib/jikan-data';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { getLatestMangaInfo } from '@/services/update-manga';
 
 interface LibraryContextType {
   library: Manga[];
@@ -19,7 +18,6 @@ interface LibraryContextType {
   isMangaInLibrary: (mangaId: number, title?: string) => boolean;
   restoreLibrary: (newLibrary: Manga[]) => void;
   updateMangaDetails: (mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters'>>) => void;
-  triggerUpdateCheck: () => void;
   isLoading: boolean;
 }
 
@@ -27,7 +25,6 @@ export const LibraryContext = createContext<LibraryContextType | undefined>(unde
 
 const generateFallbackId = (title: string) => `fb-${title.toLowerCase().replace(/\s+/g, '-')}`;
 const LOCAL_STORAGE_KEY = 'mangatrack-library';
-const NOTIFICATIONS_KEY = 'mangatrack-notifications';
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const [localLibrary, setLocalLibrary] = useState<Manga[]>([]);
@@ -265,69 +262,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
   }, [user, toast]);
 
-    const triggerUpdateCheck = useCallback(async () => {
-        if (!user || user.isAnonymous || !firestore) {
-            toast({ title: "Função indisponível", description: "A verificação de capítulos só funciona para usuários logados." });
-            return;
-        }
-
-        const readingList = library.filter(m => m.status === 'Lendo');
-        if (readingList.length === 0) {
-            toast({ title: "Nada para verificar", description: "Você não tem nenhum título na sua lista 'Lendo'." });
-            return;
-        }
-
-        toast({ title: "Verificação iniciada...", description: `Buscando atualizações para ${readingList.length} títulos.` });
-
-        let updatesFound = 0;
-        const batch = writeBatch(firestore);
-
-        const newNotifications = [];
-
-        for (const manga of readingList) {
-            try {
-                const latestInfo = await getLatestMangaInfo(manga.id, manga.title);
-                if (latestInfo && latestInfo.latestChapter && latestInfo.latestChapter > manga.totalChapters) {
-                    const docRef = doc(firestore, 'users', user.uid, 'library', manga.id);
-                    batch.update(docRef, { totalChapters: latestInfo.latestChapter, updatedAt: Timestamp.now() });
-                    updatesFound++;
-                    
-                    const notification = {
-                      id: `${manga.id}-${new Date().getTime()}`,
-                      mangaTitle: manga.title,
-                      message: `Novo total de capítulos: ${latestInfo.latestChapter} (antes ${manga.totalChapters}).`,
-                      date: new Date().toISOString()
-                    };
-                    newNotifications.push(notification);
-                }
-            } catch (error) {
-                console.error(`Falha ao verificar ${manga.title}:`, error);
-            }
-        }
-
-        if (updatesFound > 0) {
-            await batch.commit();
-            
-            // Salva notificações no localStorage
-            const existingNotifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]');
-            const updatedNotifications = [...newNotifications, ...existingNotifications];
-            localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updatedNotifications));
-            window.dispatchEvent(new Event('storage')); // Dispara evento para atualizar outros componentes
-
-            toast({
-                title: "Atualizações Encontradas!",
-                description: `${updatesFound} título(s) tiveram seus totais de capítulos atualizados.`
-            });
-        } else {
-            toast({
-                title: "Nenhuma atualização",
-                description: "Nenhum capítulo novo encontrado para os títulos na sua lista de leitura."
-            });
-        }
-    }, [library, user, firestore, toast]);
-
   return (
-    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails, triggerUpdateCheck, isLoading }}>
+    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails, isLoading }}>
       {children}
     </LibraryContext.Provider>
   );

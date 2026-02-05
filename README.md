@@ -7,10 +7,10 @@ A aplicação é um **Progressive Web App (PWA)**, o que significa que pode ser 
 ## ✨ Recursos Principais
 
 - **Biblioteca Pessoal:** Adicione títulos à sua biblioteca e organize-os por status: "Lendo", "Planejo Ler" ou "Completo".
-- **Busca Online Inteligente:** Encontre novos títulos buscando na web com um agente de IA, garantindo resultados mais precisos e resilientes.
+- **Busca Online:** Encontre novos títulos buscando na API pública do Jikan (MyAnimeList).
 - **Acompanhamento de Progresso:** Marque facilmente os capítulos lidos e visualize seu progresso com barras de porcentagem.
 - **Estatísticas Visuais:** Tenha insights sobre seus hábitos de leitura com gráficos que mostram a distribuição de gêneros e o status dos seus títulos.
-- **Sincronização na Nuvem:** Crie uma conta com e-mail e senha para ter sua biblioteca sincronizada e acessível em qualquer dispositivo através do Firebase.
+- **Sincronização na Nuvem (Opcional):** Crie uma conta com e-mail e senha para ter sua biblioteca sincronizada e acessível em qualquer dispositivo através do Firebase.
 - **Modo Offline:** Prefere não criar uma conta? Use o modo anônimo e seus dados serão salvos localmente no seu navegador.
 - **Backup e Restauração:** No modo offline, você pode exportar sua biblioteca para um arquivo JSON e restaurá-la a qualquer momento.
 - **Design Responsivo e Moderno:** Interface otimizada para uma experiência de uso agradável tanto em desktops quanto em dispositivos móveis (Android/iOS).
@@ -23,10 +23,9 @@ O MangaTrack foi construído com um conjunto de tecnologias moderno e escalável
 
 - **Framework:** [Next.js](https://nextjs.org/) (com App Router)
 - **Linguagem:** [TypeScript](https://www.typescriptlang.org/)
-- **Inteligência Artificial:** [Google AI & Genkit](https://developers.google.com/gen-ai/genkit)
 - **Estilização:** [Tailwind CSS](https://tailwindcss.com/)
 - **Componentes UI:** [ShadCN UI](https://ui.shadcn.com/)
-- **Backend e Banco de Dados:** [Firebase](https://firebase.google.com/) (Authentication para usuários e Firestore como banco de dados NoSQL)
+- **Backend e Banco de Dados (Opcional):** [Firebase](https://firebase.google.com/) (Authentication para usuários e Firestore como banco de dados NoSQL)
 - **Gráficos:** [Recharts](https://recharts.org/)
 - **Progressive Web App (PWA):** [next-pwa](https://www.npmjs.com/package/next-pwa)
 - **Validação de Formulários:** [React Hook Form](https://react-hook-form.com/) & [Zod](https://zod.dev/)
@@ -47,28 +46,20 @@ git clone https://github.com/SEU_USUARIO/mangatrack.git
 cd mangatrack
 ```
 
-### 2. Configure as Variáveis de Ambiente
+### 2. Configure as Variáveis de Ambiente (Opcional)
 
-Para que a aplicação se conecte ao Firebase e aos serviços de IA do Google, você precisa de credenciais.
+Por padrão, a aplicação rodará em **modo local**, salvando os dados no seu navegador. Para ativar a sincronização na nuvem com o Firebase, você precisa configurar as credenciais.
 
-1.  **Chave de API do Gemini (Obrigatório):**
-    *   Acesse o [Google AI Studio](https://aistudio.google.com/app/apikey) para criar uma chave de API.
-    *   Copie a chave gerada.
-
-2.  **Projeto Firebase (Opcional, para login e sincronização):**
+1.  **Crie um Projeto Firebase:**
     *   Acesse o [console do Firebase](https://console.firebase.google.com/) e crie um novo projeto.
     *   Adicione um aplicativo da Web ao seu projeto.
     *   Nas configurações do projeto, encontre suas credenciais de configuração do Firebase.
 
-3.  **Crie o arquivo `.env`:**
+2.  **Crie o arquivo `.env`:**
     *   Crie um arquivo chamado `.env` na raiz do projeto e adicione suas credenciais.
 
 **Conteúdo do arquivo `.env`:**
 ```
-# Chave de API do Google Gemini (Obrigatória para busca e sincronização)
-# Obtenha em: https://aistudio.google.com/app/apikey
-GEMINI_API_KEY="AIza..."
-
 # Credenciais do Firebase (Opcional, para login com e-mail e sincronização na nuvem)
 NEXT_PUBLIC_FIREBASE_API_KEY="AIza..."
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="seu-projeto.firebaseapp.com"
@@ -78,7 +69,7 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="12345..."
 NEXT_PUBLIC_FIREBASE_APP_ID="1:12345...:web:abcdef..."
 ```
 
-> **Atenção:** O arquivo `src/firebase/config.ts` utiliza as variáveis do Firebase. O `src/ai/genkit.ts` utiliza a variável do Gemini. Certifique-se de que os nomes das variáveis no `.env` correspondem aos usados no código.
+> **Atenção:** O arquivo `src/firebase/config.ts` utiliza as variáveis do Firebase. Se elas não estiverem presentes, o app funcionará no modo local/offline.
 
 ### 3. Instale as Dependências
 
