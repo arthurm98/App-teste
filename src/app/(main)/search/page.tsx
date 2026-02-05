@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MangaType } from "@/lib/data";
+import { Manga, MangaType } from "@/lib/data";
 
 type ApiSource = "Auto" | "Jikan" | "Kitsu" | "AniList";
 
@@ -31,6 +31,18 @@ function normalizeMangaType(type: string | null): MangaType {
     if (lowerType.includes('oel') || lowerType.includes('doujinshi')) return 'Mangá';
     return 'Outro';
 }
+
+function normalizeEditorialStatus(status: string): Manga['editorialStatus'] {
+    const lowerStatus = status.toLowerCase();
+    if (lowerStatus.includes('finished') || lowerStatus.includes('complete')) {
+        return 'Finalizado';
+    }
+    if (lowerStatus.includes('publishing') || lowerStatus.includes('releasing') || lowerStatus.includes('current')) {
+        return 'Em Andamento';
+    }
+    return 'Desconhecido';
+}
+
 
 function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
   const imageUrl = manga.attributes.posterImage?.original || "";
@@ -255,6 +267,8 @@ export default function SearchPage() {
         results.sort((a, b) => (b.score || 0) - (a.score || 0));
       }
       
+       results = results.map(m => ({ ...m, status: normalizeEditorialStatus(m.status) as any }));
+
       if (results.length === 0) {
         let description = "Nenhum título foi encontrado com esse termo. Tente outra palavra-chave.";
         if (failedApis.length > 0) {

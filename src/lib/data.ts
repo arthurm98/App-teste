@@ -4,50 +4,33 @@ export type MangaStatus = "Lendo" | "Planejo Ler" | "Completo";
 export type MangaType = "Mangá" | "Manhwa" | "Webtoon" | "Novel" | "Outro";
 
 /**
- * @fileoverview Defines the core data structure for a library item based on user control.
+ * @fileoverview Define a estrutura de dados central para um item da biblioteca.
  *
- * HIERARQUIA DE AUTORIDADE (ABSOLUTA E FINAL):
- * 1. Ação do Usuário: O usuário tem controle total e final sobre todos os dados.
- * 2. Status da Biblioteca (`status`): Este campo define em qual aba a obra aparece.
- *    Ele SÓ PODE ser alterado por uma ação explícita e manual do usuário.
- * 3. Progresso Numérico (`readChapters`, `totalChapters`): São dados informativos editáveis
- *    pelo usuário. Eles NUNCA afetam o `status` da obra nem movem a obra entre abas.
- * 4. API Externa: Fornece apenas metadados (título, capa) para exibição e NUNCA sobrepõe
- *    dados do usuário nem altera o `status`.
- * 5. Lógica do Sistema: O sistema NÃO PODE inferir, corrigir ou mover obras
- *    automaticamente. Ele apenas reflete o estado definido pelo usuário.
+ * LÓGICA DE STATUS AUTOMATIZADA:
+ * O sistema agora classifica as obras em abas automaticamente com base em regras claras.
+ *
+ * 1.  **`status` (Status da Biblioteca):** Determina em qual aba a obra aparece.
+ *     - É definido AUTOMATICAMENTE pelo sistema.
+ *     - Regras de Classificação:
+ *       - Se `readChapters === 0` -> `status` = "Planejo Ler"
+ *       - Se `readChapters > 0` E (`readChapters < totalChapters` OU `editorialStatus !== 'Finalizado'`) -> `status` = "Lendo"
+ *       - Se `readChapters >= totalChapters` E `editorialStatus === 'Finalizado'` -> `status` = "Completo"
+ *
+ * 2.  **`editorialStatus` (Status da Publicação):** Armazena o status oficial da obra
+ *     (ex: "Em Andamento", "Finalizado") obtido da API. É um pilar da automação.
+ *
+ * 3.  **`readChapters` e `totalChapters`:** Controlados pelo usuário. Acionam a lógica
+ *     de reclassificação automática sempre que são alterados.
  */
 export type Manga = {
   id: string;
   title: string;
   type: MangaType;
-
-  /**
-   * Define em qual aba a obra aparece ("Lendo", "Planejo Ler", "Completo").
-   * Este campo é a ÚNICA fonte da verdade para a organização das abas.
-   * É alterado APENAS por uma ação manual e explícita do usuário.
-   */
   status: MangaStatus;
-
-  /**
-   * O número de capítulos que o usuário marcou como lidos.
-   * Totalmente editável pelo usuário e NÃO afeta o `status`.
-   */
   readChapters: number;
-
-  /**
-   * O número total de capítulos da obra, conforme definido pelo usuário.
-   * Usado para cálculo de progresso, mas NÃO afeta o `status`.
-   */
   totalChapters: number;
-  
-  /**
-   * O capítulo mais recente disponível, obtido da API via sincronização MANUAL.
-   * Este campo é apenas para fins informativos.
-   * NUNCA sobrepõe `totalChapters` ou afeta o `status`.
-   */
   latestChapter: number;
-
+  editorialStatus: 'Em Andamento' | 'Finalizado' | 'Desconhecido';
   genres: string[];
   imageUrl?: string;
   createdAt: Timestamp;

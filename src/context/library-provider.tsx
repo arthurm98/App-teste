@@ -15,7 +15,6 @@ interface LibraryContextType {
   addToLibrary: (manga: JikanManga) => void;
   removeFromLibrary: (mangaId: string) => void;
   updateChapter: (mangaId: string, newChapter: number) => void;
-  updateStatus: (mangaId: string, newStatus: MangaStatus) => void;
   isMangaInLibrary: (mangaId: number, title?: string, type?: MangaType) => boolean;
   restoreLibrary: (newLibrary: Manga[]) => void;
   updateMangaDetails: (mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters'>>) => void;
@@ -40,11 +39,21 @@ const addNotification = (mangaTitle: string, message: string) => {
         const existing = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]') as Notification[];
         const updated = [newNotification, ...existing].slice(0, 50); // Limita a 50 notificações
         localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updated));
-        // Dispara um evento para que outros componentes (como o log) possam reagir
         window.dispatchEvent(new Event('storage'));
     } catch (e) {
         console.error("Falha ao salvar notificação", e);
     }
+};
+
+const getUpdatedStatus = (manga: Pick<Manga, 'readChapters' | 'totalChapters' | 'editorialStatus'>): MangaStatus => {
+    if (manga.readChapters <= 0) {
+        return "Planejo Ler";
+    }
+    // Considera completo apenas se o total de capítulos for maior que zero
+    if (manga.totalChapters > 0 && manga.readChapters >= manga.totalChapters && manga.editorialStatus === 'Finalizado') {
+        return "Completo";
+    }
+    return "Lendo";
 };
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
@@ -57,7 +66,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  // Load local library from LocalStorage
   useEffect(() => {
     try {
       const savedLibrary = window.localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -71,7 +79,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Save local library to LocalStorage when it changes
   useEffect(() => {
     if (isLocalLoaded && (!user || user.isAnonymous)) {
       try {
@@ -87,7 +94,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
       updateDocumentNonBlocking(docRef, { ...updates, updatedAt: Timestamp.now() });
     } else {
-      setLocalLibrary(prev => prev.map(m => m.id === mangaId ? { ...m, ...updates, updatedAt: Timestamp.now() } : m));
+      setLocalLibrary(prev => prev.map(m => m.id === mangaId ? { ...m, ...updates, updatedAt: Timestamp.now() } as Manga : m));
     }
   }, [user, firestore]);
   
@@ -102,8 +109,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
                 
                 if (apiLatestChapter && apiLatestChapter > mangaData.latestChapter) {
                     updatesFound++;
-                    // A sincronização SÓ PODE atualizar metadados como `latestChapter`.
-                    // NUNCA deve alterar status, readChapters ou totalChapters definidos pelo usuário.
                     updateLibraryItem(mangaData.id, { latestChapter: apiLatestChapter });
                     addNotification(mangaData.title, `Novo capítulo detectado: ${apiLatestChapter}.`);
                 }
@@ -128,7 +133,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   }, [updateLibraryItem, toast]);
 
-  // Cloud library listener
   useEffect(() => {
     let unsubscribe: Unsubscribe | undefined;
     if (user && !user.isAnonymous && firestore) {
@@ -158,7 +162,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe?.();
   }, [user, firestore, toast]);
 
-  // Sync local to cloud on login
   useEffect(() => {
     if (user && !user.isAnonymous && firestore && isLocalLoaded && localLibrary.length > 0) {
       const timer = setTimeout(() => {
@@ -234,12 +237,13 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       id: mangaId,
       title: manga.title,
       type: mangaType,
-      status: "Planejo Ler", // Status inicial padrão
-      imageUrl: manga.images.webp.large_image_url || manga.images.webp.image_url,
-      totalChapters: manga.chapters || 0,
+      status: "Planejo Ler",
       readChapters: 0,
+      totalChapters: manga.chapters || 0,
       latestChapter: manga.chapters || 0,
+      editorialStatus: manga.status as Manga['editorialStatus'],
       genres: manga.genres.map(g => g.name),
+      imageUrl: manga.images.webp.large_image_url || manga.images.webp.image_url,
       createdAt: now,
       updatedAt: now,
     };
@@ -270,28 +274,20 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     if (!manga) return;
 
     const newRead = Math.max(0, newChapter);
-    
-    // Esta função agora APENAS atualiza o número de capítulos.
-    // A mudança de status é uma ação manual e separada do usuário.
-    updateLibraryItem(mangaId, { readChapters: newRead });
+    const updatedManga = { ...manga, readChapters: newRead };
+    const newStatus = getUpdatedStatus(updatedManga);
+
+    updateLibraryItem(mangaId, { readChapters: newRead, status: newStatus });
   }, [library, updateLibraryItem]);
   
-  const updateStatus = useCallback((mangaId: string, newStatus: MangaStatus) => {
-    // Esta é a ÚNICA função que pode mover uma obra entre abas (status).
-    // É uma ação manual e explícita do usuário. Não deve inferir outras mudanças.
-    const manga = library.find(m => m.id === mangaId);
-    if (!manga) return;
-
-    updateLibraryItem(mangaId, { status: newStatus });
-    toast({ title: "Status Atualizado", description: `O status de "${manga.title}" foi alterado para ${newStatus}.` });
-  }, [library, toast, updateLibraryItem]);
-  
   const updateMangaDetails = useCallback((mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters'>>) => {
-     // Esta função salva os detalhes editados pelo usuário, sem inferir o status.
      const manga = library.find(m => m.id === mangaId);
      if (!manga) return;
      
-     updateLibraryItem(mangaId, details);
+     const updatedDetails = { ...manga, ...details };
+     const newStatus = getUpdatedStatus(updatedDetails);
+
+     updateLibraryItem(mangaId, { ...details, status: newStatus });
      toast({ title: "Detalhes Atualizados", description: `As informações de "${manga.title}" foram salvas.` });
   }, [library, toast, updateLibraryItem]);
 
@@ -320,7 +316,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }, [library, performUpdateCheck, toast]);
 
   return (
-    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails, isLoading, triggerUpdateCheck }}>
+    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, isMangaInLibrary, restoreLibrary, updateMangaDetails, isLoading, triggerUpdateCheck }}>
       {children}
     </LibraryContext.Provider>
   );

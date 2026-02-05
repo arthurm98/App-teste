@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, Trash2, Check, BookOpen, Clock, MoreVertical, Pencil } from "lucide-react";
+import { Minus, Plus, Trash2, MoreVertical, Pencil } from "lucide-react";
 import { useLibrary } from "@/hooks/use-library";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { EditMangaDialog } from "./edit-manga-dialog";
@@ -23,25 +23,19 @@ interface MangaCardProps {
 }
 
 export function MangaCard({ manga }: MangaCardProps) {
-  const { updateChapter, removeFromLibrary, updateStatus } = useLibrary();
+  const { updateChapter, removeFromLibrary } = useLibrary();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isImageError, setIsImageError] = useState(false);
 
   const imageUrl = manga.imageUrl || "https://picsum.photos/seed/placeholder/400/600";
   
-  // Define a fonte da verdade para o progresso. Usa `latestChapter` se disponível, senão `totalChapters`.
-  const progressDenominator = manga.latestChapter > 0 ? manga.latestChapter : manga.totalChapters;
+  const progressDenominator = manga.totalChapters > 0 ? manga.totalChapters : manga.latestChapter;
   const progress = progressDenominator > 0 ? (manga.readChapters / progressDenominator) * 100 : 0;
 
   const handleChapterChange = (amount: number) => {
-    // Garante que o progresso não seja menor que 0.
     const newChapter = Math.max(0, manga.readChapters + amount);
     updateChapter(manga.id, newChapter);
   };
-  
-  const handleStatusChange = (status: MangaStatus) => {
-    updateStatus(manga.id, status);
-  }
 
   return (
     <>
@@ -60,7 +54,7 @@ export function MangaCard({ manga }: MangaCardProps) {
               className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
               data-ai-hint={'manga cover'}
               onError={() => setIsImageError(true)}
-              priority={false} // Imagens da biblioteca não são prioridade
+              priority={false}
             />
           )}
           <Badge variant="secondary" className="absolute top-2 left-2">{manga.type}</Badge>
@@ -75,19 +69,6 @@ export function MangaCard({ manga }: MangaCardProps) {
                       <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
                           <Pencil className="mr-2 h-4 w-4" />
                           <span>Editar</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleStatusChange("Lendo")} disabled={manga.status === 'Lendo'}>
-                          <BookOpen className="mr-2 h-4 w-4" />
-                          <span>Marcar como "Lendo"</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleStatusChange("Planejo Ler")} disabled={manga.status === 'Planejo Ler'}>
-                          <Clock className="mr-2 h-4 w-4" />
-                          <span>Marcar como "Planejo Ler"</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleStatusChange("Completo")} disabled={manga.status === 'Completo'}>
-                          <Check className="mr-2 h-4 w-4" />
-                          <span>Marcar como "Completo"</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => removeFromLibrary(manga.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
