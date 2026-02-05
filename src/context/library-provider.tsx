@@ -8,8 +8,6 @@ import { JikanManga } from '@/lib/jikan-data';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { getLatestChapter } from '@/ai/flows/get-latest-chapter-flow';
-import { isAiAvailable } from '@/ai/config';
 
 interface LibraryContextType {
   library: Manga[];
@@ -22,7 +20,6 @@ interface LibraryContextType {
   updateMangaDetails: (mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters'>>) => void;
   isLoading: boolean;
   syncLocalDataToCloud: () => Promise<void>;
-  checkForUpdates: (title: string) => Promise<void>;
 }
 
 export const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
@@ -193,44 +190,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
   }, [user, firestore, cloudLibrary, toast]);
 
-  const checkForUpdates = useCallback(async (title: string) => {
-    if (!isAiAvailable) {
-        toast({
-            variant: 'destructive',
-            title: 'Funcionalidade de IA não configurada',
-            description: 'Para usar esta função, adicione sua chave de API do Gemini no arquivo .env.',
-        });
-        return;
-    }
-    const { id: toastId } = toast({
-      title: 'Verificando atualizações...',
-      description: `Buscando o capítulo mais recente de "${title}"...`,
-    });
-    try {
-        const result = await getLatestChapter(title);
-        let description = `A busca por "${title}" foi concluída.`;
-        if (result.found) {
-            description = `O capítulo mais recente encontrado para "${title}" é o ${result.latestChapter}.`;
-        } else {
-            description = `Não foi possível encontrar um capítulo recente para "${title}".`;
-        }
-        toast({
-            id: toastId,
-            title: 'Verificação Concluída',
-            description: description,
-        });
-    } catch (error) {
-        console.error('Error checking for updates:', error);
-        toast({
-            id: toastId,
-            variant: 'destructive',
-            title: 'Erro na Verificação',
-            description: `Não foi possível verificar as atualizações para "${title}".`,
-        });
-    }
-  }, [toast]);
-
-
   const library = useMemo(() => (!user ? localLibrary : cloudLibrary), [user, cloudLibrary, localLibrary]);
   const isLoading = useMemo(() => isUserLoading || (!user ? !isLocalLoaded : isCloudLoading), [user, isUserLoading, isCloudLoading, isLocalLoaded]);
 
@@ -345,7 +304,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   }, [user, toast]);
 
   return (
-    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails, isLoading, syncLocalDataToCloud, checkForUpdates }}>
+    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails, isLoading, syncLocalDataToCloud }}>
       {children}
     </LibraryContext.Provider>
   );
