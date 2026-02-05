@@ -9,14 +9,14 @@ export type Manga = {
   type: MangaType;
   /**
    * O status de leitura é definido exclusivamente pela ação do usuário.
-   * Não deve ser inferido automaticamente.
+   * Não deve ser inferido automaticamente. A conclusão é definida apenas por `status: "Completo"`.
    */
   status: MangaStatus;
   
   /**
    * O número total de capítulos da obra, se for conhecido e finalizado.
-   * Para obras em andamento, pode ser 0.
    * Este campo é definido pelo usuário ou por APIs para obras concluídas.
+   * Não deve ser usado para inferir o progresso de obras em andamento.
    */
   totalChapters: number;
   
