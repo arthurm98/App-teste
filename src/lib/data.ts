@@ -4,15 +4,15 @@ export type MangaStatus = "Lendo" | "Planejo Ler" | "Completo";
 export type MangaType = "Mangá" | "Manhwa" | "Webtoon" | "Novel" | "Outro";
 
 /**
- * @fileoverview Defines the core data structure for a library item.
+ * @fileoverview Defines the core data structure for a library item based on user control.
  *
- * HIERARQUIA DE AUTORIDADE (ABSOLUTA):
+ * HIERARQUIA DE AUTORIDADE (ABSOLUTA E FINAL):
  * 1. Ação do Usuário: O usuário tem controle total e final sobre todos os dados.
  * 2. Status da Biblioteca (`status`): Este campo define em qual aba a obra aparece.
- *    Ele SÓ PODE ser alterado por uma ação explícita do usuário (botão, menu, etc.).
+ *    Ele SÓ PODE ser alterado por uma ação explícita e manual do usuário.
  * 3. Progresso Numérico (`readChapters`, `totalChapters`): São dados informativos editáveis
- *    pelo usuário. Eles NUNCA afetam o `status` da obra.
- * 4. API Externa: Fornece apenas metadados iniciais (título, capa). NUNCA sobrepõe
+ *    pelo usuário. Eles NUNCA afetam o `status` da obra nem movem a obra entre abas.
+ * 4. API Externa: Fornece apenas metadados (título, capa) para exibição e NUNCA sobrepõe
  *    dados do usuário nem altera o `status`.
  * 5. Lógica do Sistema: O sistema NÃO PODE inferir, corrigir ou mover obras
  *    automaticamente. Ele apenas reflete o estado definido pelo usuário.

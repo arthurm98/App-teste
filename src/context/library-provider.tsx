@@ -266,11 +266,19 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   }, [library, toast, user, firestore]);
 
   const updateChapter = useCallback((mangaId: string, newChapter: number) => {
-    // Esta função atualiza APENAS o número de capítulos lidos.
-    // Nenhuma outra lógica ou mudança de status deve ser inferida.
+    const manga = library.find(m => m.id === mangaId);
+    if (!manga) return;
+
     const newRead = Math.max(0, newChapter);
-    updateLibraryItem(mangaId, { readChapters: newRead });
-  }, [updateLibraryItem]);
+    let newStatus = manga.status;
+    
+    // Move para 'Lendo' ao começar a ler, mas NUNCA muda de status de outra forma.
+    if (manga.status === 'Planejo Ler' && newRead > 0) {
+      newStatus = 'Lendo';
+    }
+
+    updateLibraryItem(mangaId, { readChapters: newRead, status: newStatus });
+  }, [library, updateLibraryItem]);
   
   const updateStatus = useCallback((mangaId: string, newStatus: MangaStatus) => {
     // Esta é a ÚNICA função que pode mover uma obra entre abas (status).

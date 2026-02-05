@@ -32,17 +32,6 @@ function normalizeMangaType(type: string | null): MangaType {
     return 'Outro';
 }
 
-// Esta função é usada apenas para exibição nos cards de busca.
-// Não é usada para armazenar o status na biblioteca.
-function normalizeDisplayStatus(status: string | null): string {
-    const lowerStatus = status?.toLowerCase() || '';
-    if (lowerStatus.includes('finished') || lowerStatus.includes('complete')) return 'Finalizado';
-    if (lowerStatus.includes('releasing') || lowerStatus.includes('publishing') || lowerStatus.includes('current')) return 'Em Andamento';
-    if (lowerStatus.includes('on hiatus')) return 'Pausado';
-    if (lowerStatus.includes('cancelled') || lowerStatus.includes('discontinued')) return 'Cancelado';
-    return 'Desconhecido';
-}
-
 function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
   const imageUrl = manga.attributes.posterImage?.original || "";
   return {
@@ -63,7 +52,7 @@ function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
     title: manga.attributes.canonicalTitle,
     type: normalizeMangaType(manga.attributes.mangaType),
     chapters: manga.attributes.chapterCount,
-    status: normalizeDisplayStatus(manga.attributes.status),
+    status: manga.attributes.status,
     score: manga.attributes.averageRating ? parseFloat(manga.attributes.averageRating) / 10 : null,
     synopsis: manga.attributes.synopsis,
     genres: [], // A API de busca da Kitsu não inclui gêneros
@@ -82,7 +71,7 @@ function adaptAniListToJikan(manga: AniListManga): JikanManga {
         title: manga.title.romaji || manga.title.english || manga.title.native,
         type: normalizeMangaType(manga.format),
         chapters: manga.chapters,
-        status: normalizeDisplayStatus(manga.status),
+        status: manga.status,
         score: manga.averageScore ? manga.averageScore / 10 : null, // AniList score é de 0-100
         synopsis: manga.description,
         genres: manga.genres.map(genre => ({ mal_id: 0, type: 'manga', name: genre, url: '' })),
@@ -146,8 +135,7 @@ export default function SearchPage() {
             const jikanResults = (data.data || []) as JikanManga[];
             return jikanResults.map(m => ({
                 ...m, 
-                type: normalizeMangaType(m.type),
-                status: normalizeDisplayStatus(m.status)
+                type: normalizeMangaType(m.type)
             }));
           }
           throw new Error(`Status: ${response.status}`);
