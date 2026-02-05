@@ -7,7 +7,7 @@ A aplicação é um **Progressive Web App (PWA)**, o que significa que pode ser 
 ## ✨ Recursos Principais
 
 - **Biblioteca Pessoal:** Adicione títulos à sua biblioteca e organize-os por status: "Lendo", "Planejo Ler" ou "Completo".
-- **Busca Online Inteligente:** Encontre novos títulos buscando em múltiplas fontes populares, como MyAnimeList (via Jikan), Kitsu e AniList.
+- **Busca Online Inteligente:** Encontre novos títulos buscando na web com um agente de IA, garantindo resultados mais precisos e resilientes.
 - **Acompanhamento de Progresso:** Marque facilmente os capítulos lidos e visualize seu progresso com barras de porcentagem.
 - **Estatísticas Visuais:** Tenha insights sobre seus hábitos de leitura com gráficos que mostram a distribuição de gêneros e o status dos seus títulos.
 - **Sincronização na Nuvem:** Crie uma conta com e-mail e senha para ter sua biblioteca sincronizada e acessível em qualquer dispositivo através do Firebase.
@@ -23,6 +23,7 @@ O MangaTrack foi construído com um conjunto de tecnologias moderno e escalável
 
 - **Framework:** [Next.js](https://nextjs.org/) (com App Router)
 - **Linguagem:** [TypeScript](https://www.typescriptlang.org/)
+- **Inteligência Artificial:** [Google AI & Genkit](https://developers.google.com/gen-ai/genkit)
 - **Estilização:** [Tailwind CSS](https://tailwindcss.com/)
 - **Componentes UI:** [ShadCN UI](https://ui.shadcn.com/)
 - **Backend e Banco de Dados:** [Firebase](https://firebase.google.com/) (Authentication para usuários e Firestore como banco de dados NoSQL)
@@ -48,16 +49,27 @@ cd mangatrack
 
 ### 2. Configure as Variáveis de Ambiente
 
-Para que a aplicação se conecte ao Firebase, você precisa de um projeto Firebase.
+Para que a aplicação se conecte ao Firebase e aos serviços de IA do Google, você precisa de credenciais.
 
-1.  Acesse o [console do Firebase](https://console.firebase.google.com/) e crie um novo projeto.
-2.  Adicione um aplicativo da Web ao seu projeto.
-3.  Nas configurações do projeto, encontre suas credenciais de configuração do Firebase.
-4.  Crie um arquivo chamado `.env` na raiz do projeto e adicione suas credenciais, seguindo o formato do arquivo `.env.example` (que deve ser criado por você com o conteúdo abaixo).
+1.  **Chave de API do Gemini (Obrigatório):**
+    *   Acesse o [Google AI Studio](https://aistudio.google.com/app/apikey) para criar uma chave de API.
+    *   Copie a chave gerada.
+
+2.  **Projeto Firebase (Opcional, para login e sincronização):**
+    *   Acesse o [console do Firebase](https://console.firebase.google.com/) e crie um novo projeto.
+    *   Adicione um aplicativo da Web ao seu projeto.
+    *   Nas configurações do projeto, encontre suas credenciais de configuração do Firebase.
+
+3.  **Crie o arquivo `.env`:**
+    *   Crie um arquivo chamado `.env` na raiz do projeto e adicione suas credenciais.
 
 **Conteúdo do arquivo `.env`:**
 ```
-# Substitua pelos dados do seu projeto Firebase
+# Chave de API do Google Gemini (Obrigatória para busca e sincronização)
+# Obtenha em: https://aistudio.google.com/app/apikey
+GEMINI_API_KEY="AIza..."
+
+# Credenciais do Firebase (Opcional, para login com e-mail e sincronização na nuvem)
 NEXT_PUBLIC_FIREBASE_API_KEY="AIza..."
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="seu-projeto.firebaseapp.com"
 NEXT_PUBLIC_FIREBASE_PROJECT_ID="seu-projeto"
@@ -66,7 +78,7 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="12345..."
 NEXT_PUBLIC_FIREBASE_APP_ID="1:12345...:web:abcdef..."
 ```
 
-> **Atenção:** O arquivo `src/firebase/config.ts` utiliza essas variáveis para configurar o Firebase. Certifique-se de que os nomes das variáveis no `.env` correspondem aos usados no código.
+> **Atenção:** O arquivo `src/firebase/config.ts` utiliza as variáveis do Firebase. O `src/ai/genkit.ts` utiliza a variável do Gemini. Certifique-se de que os nomes das variáveis no `.env` correspondem aos usados no código.
 
 ### 3. Instale as Dependências
 

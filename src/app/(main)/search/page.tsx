@@ -9,6 +9,7 @@ import type { JikanManga } from "@/lib/jikan-data";
 import { OnlineMangaCard } from "../_components/online-manga-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { searchManga } from "@/ai/flows/search-manga-flow";
+import { isAiAvailable } from "@/ai/genkit";
 
 
 const CACHE_PREFIX = "mangatrack_ai_search_";
@@ -52,6 +53,8 @@ export default function SearchPage() {
   }, [searchTerm]);
 
   useEffect(() => {
+    if (!isAiAvailable) return;
+
     const fetchMangas = async () => {
       if (debouncedSearchTerm.trim().length < 3) {
         setSearchResults([]);
@@ -111,6 +114,18 @@ export default function SearchPage() {
 
     fetchMangas();
   }, [debouncedSearchTerm, toast]);
+
+  if (!isAiAvailable) {
+    return (
+        <div className="container mx-auto text-center py-10">
+            <h1 className="text-3xl font-headline font-bold mb-4">Busca com IA Desativada</h1>
+            <p className="text-muted-foreground max-w-md mx-auto">
+                Para ativar a busca online, você precisa configurar sua chave de API do Google Gemini.
+                Adicione a variável de ambiente <code className="bg-muted text-foreground px-1 py-0.5 rounded">GEMINI_API_KEY</code> ao seu arquivo <code className="bg-muted text-foreground px-1 py-0.5 rounded">.env</code> e reinicie o servidor.
+            </p>
+        </div>
+    );
+  }
 
   const isLoading = isSearching || isPending;
 

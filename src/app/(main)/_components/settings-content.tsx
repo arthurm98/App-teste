@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useLibrary } from "@/hooks/use-library";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase";
+import { isAiAvailable } from "@/ai/genkit";
 
 const LAST_CHECK_KEY = 'mangatrack-last-check';
 const COOLDOWN_KEY = 'mangatrack-cooldown-end';
@@ -172,7 +173,11 @@ export function SettingsContent({ showSyncOptions = false }: SettingsContentProp
         setLastCheck(now.toLocaleString('pt-BR'));
         setCooldownTime(calculateRemainingTime(cooldownEndTime));
 
-        toast({ title: "Verificação Iniciada", description: "A busca por novos capítulos para toda a biblioteca começou em segundo plano." });
+        const toastDescription = isAiAvailable
+            ? "A busca por novos capítulos (incluindo IA) começou em segundo plano."
+            : "A busca por novos capítulos (usando APIs padrão) começou. A busca com IA está desativada.";
+
+        toast({ title: "Verificação Iniciada", description: toastDescription });
     }
 
     if (showSyncOptions) {
