@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
@@ -31,8 +32,6 @@ export const LibraryContext = createContext<LibraryContextType | undefined>(unde
 const generateFallbackId = (title: string, type: MangaType) => `fb-${type.toLowerCase()}-${title.toLowerCase().replace(/\s+/g, '-')}`;
 const LOCAL_STORAGE_KEY = 'mangatrack-library';
 const NOTIFICATIONS_KEY = 'mangatrack-notifications';
-const UPDATE_INTERVAL_DAYS = 7;
-const LAST_CHECK_KEY = 'mangatrack-last-check';
 
 const addNotification = (mangaTitle: string, message: string) => {
     const newNotification: Notification = {
@@ -57,8 +56,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const [cloudLibrary, setCloudLibrary] = useState<Manga[]>([]);
   const [isLocalLoaded, setIsLocalLoaded] = useState(false);
   const [isCloudLoading, setIsCloudLoading] = useState(true);
-  const [forceCheck, setForceCheck] = useState(false);
-
 
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
@@ -131,20 +128,24 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       );
       
       Promise.all(promises).then(() => {
+        console.log("Verificação de atualização concluída.");
         if (updatesFound > 0) {
             toast({
                 title: "Novos Capítulos Encontrados",
                 description: `A verificação encontrou atualizações para ${updatesFound} título(s). Confira o log de notificações.`,
             });
+        } else {
+             toast({
+                title: "Nenhuma atualização encontrada",
+                description: "Nenhum novo capítulo foi encontrado para suas obras em andamento.",
+            });
         }
-        localStorage.setItem(LAST_CHECK_KEY, new Date().toISOString());
-        console.log("Verificação de atualização concluída.");
       });
 
   }, [updateLibraryItem, toast]);
 
 
-  // Cloud library listener & weekly update
+  // Cloud library listener
   useEffect(() => {
     let unsubscribe: Unsubscribe | undefined;
     if (user && !user.isAnonymous && firestore) {
@@ -154,26 +155,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         const cloudData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Manga));
         setCloudLibrary(cloudData);
         setIsCloudLoading(false);
-
-        const lastCheck = localStorage.getItem(LAST_CHECK_KEY);
-        let shouldCheck = forceCheck; // Usar o estado para forçar
-        if (!shouldCheck && !lastCheck) {
-            shouldCheck = true; // Primeira verificação
-        } else if (!shouldCheck && lastCheck) {
-            const lastCheckDate = new Date(lastCheck);
-            const now = new Date();
-            const diffDays = (now.getTime() - lastCheckDate.getTime()) / (1000 * 60 * 60 * 24);
-            if (diffDays > UPDATE_INTERVAL_DAYS) {
-                shouldCheck = true;
-            }
-        }
-        
-        if (shouldCheck && cloudData.length > 0) {
-            const mangasToUpdate = cloudData.filter(m => m.status !== 'Completo');
-            performUpdateCheck(mangasToUpdate);
-            if(forceCheck) setForceCheck(false); // Reseta o gatilho
-        }
-
       }, error => {
         const contextualError = new FirestorePermissionError({
             operation: 'list',
@@ -192,7 +173,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       setIsCloudLoading(false);
     }
     return () => unsubscribe?.();
-  }, [user, firestore, toast, performUpdateCheck, forceCheck]);
+  }, [user, firestore, toast]);
 
   // Sync local to cloud on login
   useEffect(() => {
@@ -250,11 +231,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   const isMangaInLibrary = useCallback((mangaId: number, title?: string, type?: MangaType) => {
     if (!title || !type) {
-        // Não é possível verificar de forma confiável sem título e tipo, então recorra à verificação de ID se disponível.
         if (mangaId > 0) return library.some(m => m.id === String(mangaId));
         return false;
     }
-    // A obra é considerada única pela combinação de título e tipo.
     return library.some(m => 
         m.title.trim().toLowerCase() === title.trim().toLowerCase() && m.type === type
     );
@@ -268,8 +247,6 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       return;
     }
     
-    // O ID de um manga deve ser estável. Se a API fornece um (MAL, AniList), usamos ele.
-    // Se não (Kitsu), geramos um a partir do título e tipo.
     const mangaId = manga.mal_id > 0 ? String(manga.mal_id) : generateFallbackId(manga.title, mangaType);
     const now = Timestamp.now();
     const newManga: Manga = {
@@ -357,9 +334,17 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
   }, [user, toast]);
 
-  const triggerUpdateCheck = useCallback(() => {
-    setForceCheck(true);
-  }, []);
+    const triggerUpdateCheck = useCallback(() => {
+        const mangasToUpdate = library.filter(m => m.editorialStatus !== 'Finalizado');
+        if (mangasToUpdate.length > 0) {
+            performUpdateCheck(mangasToUpdate);
+        } else {
+            toast({
+                title: "Nenhuma obra para verificar",
+                description: "Sua biblioteca não contém obras em andamento.",
+            });
+        }
+    }, [library, performUpdateCheck, toast]);
 
   return (
     <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails, isLoading, triggerUpdateCheck }}>
