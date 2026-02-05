@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useToast } from '@/hooks/use-toast';
@@ -12,17 +11,23 @@ export function FirebaseErrorListener() {
 
   useEffect(() => {
     const handleError = (error: FirestorePermissionError) => {
-      console.error("Firebase Permission Error:", error.message);
+      // Em um ambiente de desenvolvimento, queremos ver o erro completo para depuração.
+      // Lançar o erro aqui acionará a sobreposição de erro do Next.js, 
+      // exibindo os "logs ricos e detalhados" que você solicitou.
+      console.error("Firebase Permission Error Detected:", error);
+
+      // Para o "teste de estresse nuclear": lançamos o erro para torná-lo impossível de ignorar.
+      // Isso fornece o log detalhado diretamente na tela durante o desenvolvimento.
+      throw error;
       
+      /*
+      // Implementação alternativa para produção (não trava o app):
       toast({
           variant: "destructive",
-          title: "Erro de Permissão",
-          description: "Você não tem permissão para realizar esta ação. Verifique as regras de segurança do Firestore.",
+          title: "Erro de Permissão do Firestore",
+          description: "Uma operação foi bloqueada pelas regras de segurança. Verifique o console para detalhes.",
       });
-
-      // We are showing a toast instead of crashing the app.
-      // If you want to crash the app, uncomment the line below.
-      // throw error;
+      */
     };
 
     errorEmitter.on('permission-error', handleError);
@@ -32,5 +37,5 @@ export function FirebaseErrorListener() {
     };
   }, [toast]);
 
-  return null;
+  return null; // Este componente não renderiza nada.
 }
