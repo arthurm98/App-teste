@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
@@ -110,11 +109,10 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
                 // Verifica se o capítulo mais recente da API é maior que o último que conhecíamos
                 if (latestInfo.latestChapter && latestInfo.latestChapter > currentLatest) {
-                    updates.totalChapters = Math.max(mangaData.totalChapters || 0, latestInfo.latestChapter);
                     updates.latestChapter = latestInfo.latestChapter; // Atualiza nosso conhecimento
                     hasUpdate = true;
                     notificationMessage = `Novo capítulo detectado: ${latestInfo.latestChapter}.`;
-                } else if (latestInfo.totalChapters && latestInfo.totalChapters > mangaData.totalChapters) {
+                } else if (latestInfo.totalChapters && latestInfo.totalChapters > (mangaData.totalChapters || 0)) {
                     updates.totalChapters = latestInfo.totalChapters;
                     hasUpdate = true;
                     notificationMessage = `Total de capítulos atualizado para ${latestInfo.totalChapters}.`;
