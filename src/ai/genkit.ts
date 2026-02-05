@@ -1,7 +1,6 @@
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/google-genai';
-
-export const isAiAvailable = !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+import { isAiAvailable } from './config';
 
 if (!isAiAvailable) {
     console.warn(

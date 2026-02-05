@@ -9,7 +9,7 @@ import type { JikanManga } from "@/lib/jikan-data";
 import { OnlineMangaCard } from "../_components/online-manga-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { searchManga } from "@/ai/flows/search-manga-flow";
-import { isAiAvailable } from "@/ai/genkit";
+import { isAiAvailable } from "@/ai/config";
 
 
 const CACHE_PREFIX = "mangatrack_ai_search_";

@@ -3,7 +3,7 @@ import { JikanManga } from "@/lib/jikan-data";
 import { KitsuManga } from "@/lib/kitsu-data";
 import { AniListManga } from "@/lib/anilist-data";
 import { getLatestChapter } from "@/ai/flows/get-latest-chapter-flow";
-import { isAiAvailable } from "@/ai/genkit";
+import { isAiAvailable } from "@/ai/config";
 
 
 interface MangaUpdateInfo {

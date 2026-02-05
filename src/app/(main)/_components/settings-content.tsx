@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useLibrary } from "@/hooks/use-library";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase";
-import { isAiAvailable } from "@/ai/genkit";
+import { isAiAvailable } from "@/ai/config";
 
 const LAST_CHECK_KEY = 'mangatrack-last-check';
 const COOLDOWN_KEY = 'mangatrack-cooldown-end';
