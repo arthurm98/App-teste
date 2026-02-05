@@ -19,16 +19,10 @@ function UserNav() {
   const handleLogout = async () => {
     if (!auth) return;
     await signOut(auth);
-    // Redireciona para a página de login após o logout.
     router.push('/login'); 
   };
 
   const handleLoginRedirect = async () => {
-    if (!auth) return;
-    // Se for um usuário anônimo, faz logout primeiro para permitir o "upgrade" da conta.
-    if (user && user.isAnonymous) {
-      await signOut(auth);
-    }
     router.push('/login');
   }
 
@@ -46,8 +40,8 @@ function UserNav() {
     );
   }
   
-  // O usuário anônimo tem um botão de login para converter a conta.
-  if (!user || user.isAnonymous) {
+  // If no user, show a Login button
+  if (!user) {
     return (
        <Button variant="outline" size="sm" onClick={handleLoginRedirect}>
          <LogIn className="mr-2 h-4 w-4" />

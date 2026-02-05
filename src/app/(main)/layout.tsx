@@ -15,17 +15,9 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   const { user, isUserLoading } = useUser();
-  const auth = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    // If Firebase is configured and the user isn't logged in after loading, redirect.
-    if (auth && !isUserLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, isUserLoading, router, auth]);
 
   // While checking auth state, show a loader.
+  // This loader will show briefly for both local and cloud mode users upon first load.
   if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -34,12 +26,7 @@ export default function MainLayout({
     );
   }
 
-  // If Firebase is configured and there's no user, don't render to prevent content flash.
-  if (auth && !user) {
-    return null; 
-  }
-
-  // If we reach here, either Firebase is not configured (local mode) or the user is logged in.
+  // The user is either logged in or has chosen local mode. Render the app.
   return (
       <SidebarProvider>
         <div className="flex w-full">

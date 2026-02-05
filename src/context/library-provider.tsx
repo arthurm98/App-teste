@@ -58,7 +58,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   // Save local library to LocalStorage when it changes
   useEffect(() => {
-    if (isLocalLoaded && (!user || user.isAnonymous)) {
+    if (isLocalLoaded && !user) {
       try {
         window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localLibrary));
       } catch (error) {
@@ -70,7 +70,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   // Cloud library listener
   useEffect(() => {
     let unsubscribe: Unsubscribe | undefined;
-    if (user && !user.isAnonymous && firestore) {
+    if (user && firestore) {
       setIsCloudLoading(true);
       const libCollection = collection(firestore, 'users', user.uid, 'library');
       unsubscribe = onSnapshot(libCollection, snapshot => {
@@ -106,7 +106,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   // Sync local to cloud on login
   useEffect(() => {
-    if (user && !user.isAnonymous && firestore && isLocalLoaded && localLibrary.length > 0) {
+    if (user && firestore && isLocalLoaded && localLibrary.length > 0) {
       const timer = setTimeout(() => {
         const syncLocalToCloud = () => {
           const batch = writeBatch(firestore);
@@ -154,7 +154,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
   }, [user, firestore, isLocalLoaded, localLibrary, cloudLibrary, toast]);
 
-  const library = useMemo(() => (!user || user.isAnonymous ? localLibrary : cloudLibrary), [user, cloudLibrary, localLibrary]);
+  const library = useMemo(() => (!user ? localLibrary : cloudLibrary), [user, cloudLibrary, localLibrary]);
   const isLoading = useMemo(() => isUserLoading || (!user ? !isLocalLoaded : isCloudLoading), [user, isUserLoading, isCloudLoading, isLocalLoaded]);
 
   const isMangaInLibrary = useCallback((mangaId: number, title?: string) => {
@@ -192,7 +192,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       updatedAt: now,
     };
 
-    if (user && !user.isAnonymous && firestore) {
+    if (user && firestore) {
       const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
       setDocumentNonBlocking(docRef, newManga, { merge: true });
     } else {
@@ -203,7 +203,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   const removeFromLibrary = useCallback((mangaId: string) => {
     const manga = library.find(m => m.id === mangaId);
-    if (user && !user.isAnonymous && firestore) {
+    if (user && firestore) {
       deleteDocumentNonBlocking(doc(firestore, 'users', user.uid, 'library', mangaId));
     } else {
       setLocalLibrary(prev => prev.filter(m => m.id !== mangaId));
@@ -215,7 +215,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   const updateChapter = useCallback((mangaId: string, newChapter: number) => {
     const updates: Partial<Manga> = { readChapters: newChapter, updatedAt: Timestamp.now() };
-    if (user && !user.isAnonymous && firestore) {
+    if (user && firestore) {
       const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
       updateDocumentNonBlocking(docRef, updates);
     } else {
@@ -227,7 +227,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     const manga = library.find(m => m.id === mangaId);
     if (!manga) return;
     const updates: Partial<Manga> = { status: newStatus, updatedAt: Timestamp.now() };
-    if (user && !user.isAnonymous && firestore) {
+    if (user && firestore) {
         const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
         updateDocumentNonBlocking(docRef, updates);
     } else {
@@ -240,7 +240,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
      const manga = library.find(m => m.id === mangaId);
      if (!manga) return;
      const updates = { ...details, updatedAt: Timestamp.now() };
-     if (user && !user.isAnonymous && firestore) {
+     if (user && firestore) {
         const docRef = doc(firestore, 'users', user.uid, 'library', mangaId);
         updateDocumentNonBlocking(docRef, updates);
      } else {
@@ -250,7 +250,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   }, [library, toast, user, firestore]);
 
   const restoreLibrary = useCallback((newLibrary: Manga[]) => {
-    if (!user || user.isAnonymous) {
+    if (!user) {
        setLocalLibrary(newLibrary);
        toast({ title: "Restauração Concluída", description: "Sua biblioteca local foi restaurada." });
     } else {

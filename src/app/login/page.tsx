@@ -12,9 +12,8 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signInAnonymously } from 'firebase/auth';
-import { Book, User as UserIcon, CloudOff } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { Book, CloudOff } from 'lucide-react';
 import Link from 'next/link';
 
 const loginSchema = z.object({
@@ -57,8 +56,7 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    // If firebase is configured and user is logged in, redirect.
-    // If firebase is not configured, this page is not the entry point, but if the user navigates here, we redirect them.
+    // If user is logged in, redirect to the main page.
     if (!isUserLoading && user) {
       router.push('/');
     }
@@ -86,6 +84,10 @@ export default function LoginPage() {
       case 'auth/weak-password':
         title = 'Senha Fraca';
         description = 'Sua senha é muito fraca. Tente uma combinação mais forte.';
+        break;
+      case 'auth/api-key-not-valid':
+        title = 'Chave de API Inválida';
+        description = 'A configuração do Firebase não é válida. A sincronização na nuvem está indisponível.';
         break;
       default:
         console.error('Authentication Error:', error);
@@ -148,30 +150,6 @@ export default function LoginPage() {
       }
   };
 
-  const handleAnonymousLogin = async () => {
-    if (auth) {
-        setIsSubmitting(true);
-        try {
-            await signInAnonymously(auth);
-            toast({
-                title: "Modo offline ativado",
-                description: "Sua biblioteca será salva neste dispositivo. Crie uma conta para sincronizar na nuvem.",
-            });
-        } catch (error) {
-            handleAuthError(error);
-        } finally {
-            setIsSubmitting(false);
-        }
-    } else {
-        toast({
-            title: "Modo Local",
-            description: "Sua biblioteca será salva apenas neste dispositivo.",
-        });
-        router.push('/');
-    }
-  }
-
-
   if (isUserLoading || user) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -180,7 +158,7 @@ export default function LoginPage() {
     );
   }
 
-  // If Firebase is not configured, show a different UI.
+  // If Firebase is not configured, show a simplified UI for local mode only.
   if (!auth) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -189,7 +167,7 @@ export default function LoginPage() {
                 <div className="mx-auto bg-muted rounded-full p-3 w-fit">
                     <CloudOff className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <CardTitle className="text-2xl font-headline mt-4">Sincronização na Nuvem Desativada</CardTitle>
+                <CardTitle className="text-2xl font-headline mt-4">Modo Local Ativado</CardTitle>
                 <CardDescription>
                     As credenciais do Firebase não foram configuradas. O aplicativo funcionará em modo local, salvando os dados apenas neste navegador.
                 </CardDescription>
@@ -198,13 +176,10 @@ export default function LoginPage() {
                 <Link href="/" passHref>
                     <Button type="button" className="w-full">
                         <Book className="mr-2 h-4 w-4" />
-                        Ir para a Biblioteca Local
+                        Ir para a Biblioteca
                     </Button>
                 </Link>
             </CardContent>
-            <CardFooter>
-                <p className="text-xs text-muted-foreground text-center w-full">Para ativar a sincronização, configure o Firebase no arquivo .env.</p>
-            </CardFooter>
             </Card>
         </div>
       )
@@ -215,7 +190,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-headline">Bem-vindo ao MangaTrack</CardTitle>
-          <CardDescription>Faça login ou crie sua conta para sincronizar sua biblioteca na nuvem.</CardDescription>
+          <CardDescription>Faça login para sincronizar sua biblioteca ou continue no modo local.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(handleLogin)} className="space-y-4">
@@ -257,20 +232,6 @@ export default function LoginPage() {
               </Button>
             </div>
           </form>
-          <div className="relative my-4">
-            <Separator />
-            <span className="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-background px-2 text-xs text-muted-foreground">OU</span>
-          </div>
-            <Button
-                type="button"
-                variant="secondary"
-                className="w-full"
-                onClick={handleAnonymousLogin}
-                disabled={isSubmitting}
-              >
-                <UserIcon className="mr-2 h-4 w-4" />
-                {isSubmitting ? 'Aguarde...' : 'Continuar Offline'}
-              </Button>
         </CardContent>
         <CardFooter className="flex-col gap-4">
            <Dialog>
@@ -312,7 +273,9 @@ export default function LoginPage() {
                     </form>
                 </DialogContent>
             </Dialog>
-            <p className="text-xs text-muted-foreground text-center w-full">Criado por ArthurM</p>
+             <Link href="/" className="text-sm text-center text-muted-foreground hover:underline mt-2">
+                Pular e usar no modo local
+            </Link>
         </CardFooter>
       </Card>
     </div>

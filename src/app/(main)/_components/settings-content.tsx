@@ -48,8 +48,8 @@ export function SettingsContent() {
     };
 
     const handleRestoreClick = () => {
-        // Bloqueia apenas se for um usuário com conta (não anônimo)
-        if (user && !user.isAnonymous) {
+        // Bloqueia se for um usuário com conta (não anônimo)
+        if (user) {
             toast({
                 variant: "destructive",
                 title: "Função Indisponível",
