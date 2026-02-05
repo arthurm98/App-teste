@@ -19,6 +19,7 @@ interface LibraryContextType {
   restoreLibrary: (newLibrary: Manga[]) => void;
   updateMangaDetails: (mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters'>>) => void;
   isLoading: boolean;
+  syncLocalDataToCloud: () => Promise<void>;
 }
 
 export const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
@@ -41,12 +42,18 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     try {
       const savedLibrary = window.localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedLibrary) {
-        const parsedLibrary: Manga[] = JSON.parse(savedLibrary);
-        // Data migration for older versions
-        const migratedLibrary = parsedLibrary.map(m => ({
-          ...m,
-          publicationStatus: m.publicationStatus || 'Unknown' // Add default if missing
-        }));
+        const parsedLibrary: any[] = JSON.parse(savedLibrary);
+        // Data migration for older versions and ensure Timestamps are correct
+        const migratedLibrary = parsedLibrary.map(m => {
+           const createdAt = m.createdAt?.seconds ? new Timestamp(m.createdAt.seconds, m.createdAt.nanoseconds) : Timestamp.now();
+           const updatedAt = m.updatedAt?.seconds ? new Timestamp(m.updatedAt.seconds, m.updatedAt.nanoseconds) : Timestamp.now();
+           return {
+                ...m,
+                publicationStatus: m.publicationStatus || 'Unknown',
+                createdAt,
+                updatedAt
+           }
+        });
         setLocalLibrary(migratedLibrary);
       }
     } catch (error) {
@@ -104,55 +111,85 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe?.();
   }, [user, firestore, toast]);
 
-  // Sync local to cloud on login
-  useEffect(() => {
-    if (user && firestore && isLocalLoaded && localLibrary.length > 0) {
-      const timer = setTimeout(() => {
-        const syncLocalToCloud = () => {
-          const batch = writeBatch(firestore);
-          let itemsToSync = 0;
-          
-          localLibrary.forEach(localManga => {
+  const syncLocalDataToCloud = useCallback(async () => {
+    if (!user || !firestore) {
+        toast({
+            variant: "destructive",
+            title: "Erro de Autenticação",
+            description: "Você precisa estar logado para sincronizar dados com a nuvem.",
+        });
+        throw new Error("User not logged in");
+    }
+
+    try {
+        const savedLibrary = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (!savedLibrary) {
+            toast({
+                title: "Nenhum Dado Local",
+                description: "Não há dados na biblioteca local para migrar.",
+            });
+            return;
+        }
+        
+        const localData: any[] = JSON.parse(savedLibrary);
+        if (localData.length === 0) {
+             toast({
+                title: "Nenhum Dado Local",
+                description: "A biblioteca local está vazia.",
+            });
+            return;
+        }
+
+        const batch = writeBatch(firestore);
+        let itemsToSync = 0;
+
+        localData.forEach(localManga => {
             const cloudManga = cloudLibrary.find(m => m.id === localManga.id);
             if (!cloudManga) {
-              const docRef = doc(firestore, 'users', user.uid, 'library', localManga.id);
-              const mangaData = { ...localManga, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
-              batch.set(docRef, mangaData);
-              itemsToSync++;
+                const docRef = doc(firestore, 'users', user.uid, 'library', localManga.id);
+                const createdAt = localManga.createdAt?.seconds ? new Timestamp(localManga.createdAt.seconds, localManga.createdAt.nanoseconds) : Timestamp.now();
+                const mangaData = { 
+                    ...localManga,
+                    publicationStatus: localManga.publicationStatus || 'Unknown',
+                    createdAt: createdAt,
+                    updatedAt: Timestamp.now() 
+                };
+                batch.set(docRef, mangaData);
+                itemsToSync++;
             }
-          });
-          
-          if (itemsToSync > 0) {
-             batch.commit().then(() => {
-              toast({
-                title: "Sincronização Concluída",
-                description: `${itemsToSync} título(s) da sua biblioteca local foram salvos na nuvem.`
-              });
-              setLocalLibrary([]);
-              window.localStorage.removeItem(LOCAL_STORAGE_KEY);
-            }).catch((error) => {
-              const permissionError = new FirestorePermissionError({
-                  path: `users/${user.uid}/library`,
-                  operation: 'write',
-                  requestResourceData: localLibrary,
-              });
-              errorEmitter.emit('permission-error', permissionError);
-              toast({
-                variant: "destructive",
-                title: "Erro na Sincronização",
-                description: "Não foi possível sincronizar sua biblioteca local com a nuvem."
-              });
+        });
+
+        if (itemsToSync > 0) {
+            await batch.commit();
+            toast({
+                title: "Migração Concluída",
+                description: `${itemsToSync} título(s) foram migrados da sua biblioteca local para a nuvem.`,
             });
-          } else if (localLibrary.length > 0) {
-            setLocalLibrary([]);
             window.localStorage.removeItem(LOCAL_STORAGE_KEY);
-          }
-        };
-        syncLocalToCloud();
-      }, 1000);
-      return () => clearTimeout(timer);
+        } else {
+            toast({
+                title: "Nenhum Item Novo",
+                description: "Todos os seus títulos locais já estão na nuvem.",
+            });
+            window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+        }
+    } catch (error) {
+        console.error("Erro na migração de dados:", error);
+        const permissionError = new FirestorePermissionError({
+            path: `users/${user.uid}/library`,
+            operation: 'write',
+            requestResourceData: 'Multiple items from local storage',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+            variant: "destructive",
+            title: "Erro na Migração",
+            description: "Não foi possível migrar sua biblioteca local para a nuvem.",
+        });
+        throw error;
     }
-  }, [user, firestore, isLocalLoaded, localLibrary, cloudLibrary, toast]);
+  }, [user, firestore, cloudLibrary, toast]);
+
 
   const library = useMemo(() => (!user ? localLibrary : cloudLibrary), [user, cloudLibrary, localLibrary]);
   const isLoading = useMemo(() => isUserLoading || (!user ? !isLocalLoaded : isCloudLoading), [user, isUserLoading, isCloudLoading, isLocalLoaded]);
@@ -251,7 +288,12 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
   const restoreLibrary = useCallback((newLibrary: Manga[]) => {
     if (!user) {
-       setLocalLibrary(newLibrary);
+       const migratedLibrary = newLibrary.map(m => {
+           const createdAt = m.createdAt?.seconds ? new Timestamp(m.createdAt.seconds, m.createdAt.nanoseconds) : Timestamp.now();
+           const updatedAt = m.updatedAt?.seconds ? new Timestamp(m.updatedAt.seconds, m.updatedAt.nanoseconds) : Timestamp.now();
+            return { ...m, createdAt, updatedAt };
+       });
+       setLocalLibrary(migratedLibrary);
        toast({ title: "Restauração Concluída", description: "Sua biblioteca local foi restaurada." });
     } else {
        toast({
@@ -263,7 +305,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   }, [user, toast]);
 
   return (
-    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails, isLoading }}>
+    <LibraryContext.Provider value={{ library, addToLibrary, removeFromLibrary, updateChapter, updateStatus, isMangaInLibrary, restoreLibrary, updateMangaDetails, isLoading, syncLocalDataToCloud }}>
       {children}
     </LibraryContext.Provider>
   );
