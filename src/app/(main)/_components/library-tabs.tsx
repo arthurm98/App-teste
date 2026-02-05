@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useLibrary } from "@/hooks/use-library";
@@ -9,21 +8,32 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function LibraryTabs() {
   const { library, isLoading } = useLibrary();
 
-  // A lógica de filtragem agora é baseada no `editorialStatus` para as abas principais,
-  // e no `status` do usuário para a lista de planejamento.
-  const emAndamento = library.filter((m) => m.editorialStatus === "Em Andamento" && m.status !== 'Planejo Ler');
-  const finalizados = library.filter((m) => m.editorialStatus === "Finalizado" && m.status !== 'Planejo Ler');
-  const planejoLer = library.filter((m) => m.status === "Planejo Ler");
+  // 1. Completas: Obras finalizadas pela editora E que o usuário leu todos os capítulos.
+  const completas = library.filter(m => 
+    m.editorialStatus === 'Finalizado' && 
+    m.totalChapters > 0 && 
+    m.readChapters === m.totalChapters
+  );
+
+  // 2. Planejo Ler: Obras que o usuário não começou a ler.
+  const planejoLer = library.filter((m) => m.readChapters === 0);
+
+  // 3. Lendo: Todas as outras obras que o usuário já começou, mas que não estão na lista de completas.
+  // Isso inclui obras "em dia" de séries em andamento.
+  const lendo = library.filter(m => 
+    m.readChapters > 0 && 
+    !completas.some(c => c.id === m.id)
+  );
 
   if (isLoading) {
     return (
-      <Tabs defaultValue="emAndamento">
+      <Tabs defaultValue="lendo">
          <TabsList className="grid w-full grid-cols-3 max-w-lg mb-6">
-          <TabsTrigger value="emAndamento">Em Andamento (0)</TabsTrigger>
-          <TabsTrigger value="finalizados">Finalizados (0)</TabsTrigger>
+          <TabsTrigger value="lendo">Lendo (0)</TabsTrigger>
+          <TabsTrigger value="completas">Completas (0)</TabsTrigger>
           <TabsTrigger value="planejoLer">Planejo Ler (0)</TabsTrigger>
         </TabsList>
-         <TabsContent value="emAndamento">
+         <TabsContent value="lendo">
            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
              {Array.from({ length: 6 }).map((_, i) => (
                <div key={i} className="flex flex-col gap-2">
@@ -39,32 +49,32 @@ export function LibraryTabs() {
   }
 
   return (
-      <Tabs defaultValue="emAndamento">
+      <Tabs defaultValue="lendo">
         <TabsList className="grid w-full grid-cols-3 max-w-lg mb-6">
-          <TabsTrigger value="emAndamento">Em Andamento ({emAndamento.length})</TabsTrigger>
-          <TabsTrigger value="finalizados">Finalizados ({finalizados.length})</TabsTrigger>
+          <TabsTrigger value="lendo">Lendo ({lendo.length})</TabsTrigger>
+          <TabsTrigger value="completas">Completas ({completas.length})</TabsTrigger>
           <TabsTrigger value="planejoLer">Planejo Ler ({planejoLer.length})</TabsTrigger>
         </TabsList>
-        <TabsContent value="emAndamento">
-          {emAndamento.length > 0 ? (
+        <TabsContent value="lendo">
+          {lendo.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {emAndamento.map((manga) => (
+              {lendo.map((manga) => (
                 <MangaCard key={manga.id} manga={manga} />
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-8">Nenhum título em andamento na sua biblioteca.</p>
+            <p className="text-muted-foreground text-center py-8">Nenhum título sendo lido no momento.</p>
           )}
         </TabsContent>
-        <TabsContent value="finalizados">
-          {finalizados.length > 0 ? (
+        <TabsContent value="completas">
+          {completas.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {finalizados.map((manga) => (
+              {completas.map((manga) => (
                 <MangaCard key={manga.id} manga={manga} />
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-8">Nenhum título finalizado na sua biblioteca.</p>
+            <p className="text-muted-foreground text-center py-8">Nenhuma obra completa na sua biblioteca.</p>
           )}
         </TabsContent>
         <TabsContent value="planejoLer">
@@ -75,7 +85,7 @@ export function LibraryTabs() {
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-8">Você não planeja ler nenhum título.</p>
+            <p className="text-muted-foreground text-center py-8">Nenhum título na sua lista de planejamento.</p>
           )}
         </TabsContent>
       </Tabs>
