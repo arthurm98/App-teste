@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useRouter } from 'next/navigation';
@@ -8,8 +7,9 @@ import { useAuth, useUser } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { LogOut, User as UserIcon, Loader2, LogIn } from 'lucide-react';
+import { LogOut, Loader2, LogIn, CloudOff } from 'lucide-react';
 import { signOut } from 'firebase/auth';
+import { Badge } from '../ui/badge';
 
 function UserNav() {
   const { user, isUserLoading } = useUser();
@@ -17,12 +17,14 @@ function UserNav() {
   const router = useRouter();
 
   const handleLogout = async () => {
+    if (!auth) return;
     await signOut(auth);
     // Redireciona para a página de login após o logout.
     router.push('/login'); 
   };
 
   const handleLoginRedirect = async () => {
+    if (!auth) return;
     // Se for um usuário anônimo, faz logout primeiro para permitir o "upgrade" da conta.
     if (user && user.isAnonymous) {
       await signOut(auth);
@@ -32,6 +34,16 @@ function UserNav() {
 
   if (isUserLoading) {
     return <Loader2 className="h-6 w-6 animate-spin" />;
+  }
+
+  // If Firebase is not configured, show a local mode badge.
+  if (!auth) {
+    return (
+      <Badge variant="outline" className="border-dashed">
+        <CloudOff className="mr-2 h-4 w-4" />
+        Modo Local
+      </Badge>
+    );
   }
   
   // O usuário anônimo tem um botão de login para converter a conta.
@@ -90,5 +102,3 @@ export function Header() {
     </header>
   );
 }
-
-    

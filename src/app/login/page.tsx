@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -14,8 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signInAnonymously } from 'firebase/auth';
-import { Book, User as UserIcon } from 'lucide-react';
+import { Book, User as UserIcon, CloudOff } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor, insira um email válido.' }),
@@ -57,6 +57,8 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
+    // If firebase is configured and user is logged in, redirect.
+    // If firebase is not configured, this page is not the entry point, but if the user navigates here, we redirect them.
     if (!isUserLoading && user) {
       router.push('/');
     }
@@ -97,6 +99,7 @@ export default function LoginPage() {
   };
 
   const handleLogin = async (data: LoginFormValues) => {
+    if (!auth) return;
     setIsSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
@@ -112,6 +115,7 @@ export default function LoginPage() {
   };
 
   const handleRegister = async (data: LoginFormValues) => {
+    if (!auth) return;
     setIsSubmitting(true);
     try {
       await createUserWithEmailAndPassword(auth, data.email, data.password);
@@ -127,6 +131,7 @@ export default function LoginPage() {
   };
   
   const handlePasswordReset = async (data: ResetPasswordFormValues) => {
+      if (!auth) return;
       setIsResetting(true);
       try {
           await sendPasswordResetEmail(auth, data.resetEmail);
@@ -144,19 +149,26 @@ export default function LoginPage() {
   };
 
   const handleAnonymousLogin = async () => {
-      setIsSubmitting(true);
-      try {
-          await signInAnonymously(auth);
-          toast({
-              title: "Modo offline ativado",
-              description: "Sua biblioteca será salva neste dispositivo. Crie uma conta para sincronizar na nuvem.",
-          });
-          // O useEffect cuidará do redirecionamento
-      } catch (error) {
-          handleAuthError(error);
-      } finally {
-          setIsSubmitting(false);
-      }
+    if (auth) {
+        setIsSubmitting(true);
+        try {
+            await signInAnonymously(auth);
+            toast({
+                title: "Modo offline ativado",
+                description: "Sua biblioteca será salva neste dispositivo. Crie uma conta para sincronizar na nuvem.",
+            });
+        } catch (error) {
+            handleAuthError(error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    } else {
+        toast({
+            title: "Modo Local",
+            description: "Sua biblioteca será salva apenas neste dispositivo.",
+        });
+        router.push('/');
+    }
   }
 
 
@@ -166,6 +178,36 @@ export default function LoginPage() {
         <Book className="h-8 w-8 animate-spin" />
       </div>
     );
+  }
+
+  // If Firebase is not configured, show a different UI.
+  if (!auth) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background p-4">
+            <Card className="w-full max-w-sm">
+            <CardHeader className="text-center">
+                <div className="mx-auto bg-muted rounded-full p-3 w-fit">
+                    <CloudOff className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <CardTitle className="text-2xl font-headline mt-4">Sincronização na Nuvem Desativada</CardTitle>
+                <CardDescription>
+                    As credenciais do Firebase não foram configuradas. O aplicativo funcionará em modo local, salvando os dados apenas neste navegador.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Link href="/" passHref>
+                    <Button type="button" className="w-full">
+                        <Book className="mr-2 h-4 w-4" />
+                        Ir para a Biblioteca Local
+                    </Button>
+                </Link>
+            </CardContent>
+            <CardFooter>
+                <p className="text-xs text-muted-foreground text-center w-full">Para ativar a sincronização, configure o Firebase no arquivo .env.</p>
+            </CardFooter>
+            </Card>
+        </div>
+      )
   }
 
   return (
@@ -276,6 +318,3 @@ export default function LoginPage() {
     </div>
   );
 }
- 
-
-    

@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { useUser } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar, BottomBar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
@@ -16,16 +15,17 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   const { user, isUserLoading } = useUser();
+  const auth = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // Se o carregamento do usuário terminou e não há usuário, redireciona para o login.
-    if (!isUserLoading && !user) {
+    // If Firebase is configured and the user isn't logged in after loading, redirect.
+    if (auth && !isUserLoading && !user) {
       router.push('/login');
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, router, auth]);
 
-  // Enquanto o estado do usuário está sendo verificado, mostramos um loader.
+  // While checking auth state, show a loader.
   if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -34,12 +34,12 @@ export default function MainLayout({
     );
   }
 
-  // Se não houver usuário após o carregamento, não renderiza o layout principal
-  // para evitar um piscar de conteúdo antes do redirecionamento.
-  if (!user) {
+  // If Firebase is configured and there's no user, don't render to prevent content flash.
+  if (auth && !user) {
     return null; 
   }
 
+  // If we reach here, either Firebase is not configured (local mode) or the user is logged in.
   return (
       <SidebarProvider>
         <div className="flex w-full">
@@ -56,5 +56,3 @@ export default function MainLayout({
       </SidebarProvider>
   );
 }
-
-    
