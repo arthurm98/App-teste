@@ -21,7 +21,7 @@ interface LibraryContextType {
   updateStatus: (mangaId: string, newStatus: MangaStatus) => void;
   isMangaInLibrary: (mangaId: number, title?: string, type?: MangaType) => boolean;
   restoreLibrary: (newLibrary: Manga[]) => void;
-  updateMangaDetails: (mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters' | 'latestChapter'>>) => void;
+  updateMangaDetails: (mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters'>>) => void;
   triggerUpdateCheck: () => void;
   isLoading: boolean;
 }
@@ -288,9 +288,24 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     const manga = library.find(m => m.id === mangaId);
     if (!manga) return;
 
-    // Lógica simplificada: apenas atualiza o número de capítulos lidos.
-    // Nenhuma outra inferência de status é feita aqui.
-    const updates: Partial<Manga> = { readChapters: newChapter };
+    const newRead = Math.max(0, newChapter);
+    const updates: Partial<Manga> = { readChapters: newRead };
+
+    let newStatus: MangaStatus;
+    // REGRA DE AUTOMATIZAÇÃO DE STATUS
+    if (manga.editorialStatus === 'Finalizado' && manga.totalChapters > 0 && newRead === manga.totalChapters) {
+        newStatus = 'Completo';
+    } else if (newRead > 0) {
+        newStatus = 'Lendo';
+    } else {
+        newStatus = 'Planejo Ler';
+    }
+    
+    // Apenas atualiza o status se ele realmente mudar
+    if (newStatus !== manga.status) {
+        updates.status = newStatus;
+    }
+
     updateLibraryItem(mangaId, updates);
   }, [library, updateLibraryItem]);
 
@@ -305,17 +320,37 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       updates.readChapters = manga.totalChapters;
     } else if (newStatus === "Planejo Ler") {
       updates.readChapters = 0;
+    } else if (newStatus === "Lendo" && manga.readChapters === 0) {
+      // Se estava em "Planejo Ler" e moveu para "Lendo", começa no cap 1
+      updates.readChapters = 1;
     }
 
     updateLibraryItem(mangaId, updates);
     toast({ title: "Status Atualizado", description: `O status de "${manga.title}" foi alterado para ${newStatus}.` });
   }, [library, toast, updateLibraryItem]);
   
-  const updateMangaDetails = useCallback((mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters' | 'latestChapter'>>) => {
+  const updateMangaDetails = useCallback((mangaId: string, details: Partial<Pick<Manga, 'readChapters' | 'totalChapters'>>) => {
      const manga = library.find(m => m.id === mangaId);
      if (!manga) return;
      
      const updates: Partial<Manga> = {...details};
+     const newRead = details.readChapters ?? manga.readChapters;
+     const newTotal = details.totalChapters ?? manga.totalChapters;
+
+     let newStatus: MangaStatus;
+    // REGRA DE AUTOMATIZAÇÃO DE STATUS
+    if (manga.editorialStatus === 'Finalizado' && newTotal > 0 && newRead === newTotal) {
+        newStatus = 'Completo';
+    } else if (newRead > 0) {
+        newStatus = 'Lendo';
+    } else {
+        newStatus = 'Planejo Ler';
+    }
+    
+    // Apenas atualiza o status se ele realmente mudar
+    if (newStatus !== manga.status) {
+        updates.status = newStatus;
+    }
      
      updateLibraryItem(mangaId, updates);
      toast({ title: "Detalhes Atualizados", description: `As informações de "${manga.title}" foram salvas.` });

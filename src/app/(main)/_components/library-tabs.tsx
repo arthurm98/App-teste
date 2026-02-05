@@ -8,23 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function LibraryTabs() {
   const { library, isLoading } = useLibrary();
 
-  // Regra 1: Obras que o usuário não começou a ler.
-  const planejoLer = library.filter((m) => m.readChapters === 0);
-
-  // Regra 2: Obras que foram oficialmente finalizadas E que o usuário leu todos os capítulos.
-  const completas = library.filter(m => 
-    m.editorialStatus === 'Finalizado' && 
-    m.totalChapters > 0 && 
-    m.readChapters === m.totalChapters // A regra estrita é 'exatamente igual'
-  );
-  
-  // Regra 3: "Lendo" é tudo o que não se encaixa nas outras duas categorias.
-  // Isso inclui obras em andamento (mesmo se em dia) e obras finalizadas que não foram totalmente lidas.
-  const lendo = library.filter(m => 
-    !planejoLer.some(p => p.id === m.id) && 
-    !completas.some(c => c.id === m.id)
-  );
-
+  // A lógica de filtragem agora é baseada diretamente no status da obra,
+  // que é atualizado automaticamente pelo LibraryProvider.
+  const lendo = library.filter((m) => m.status === 'Lendo');
+  const completas = library.filter((m) => m.status === 'Completo');
+  const planejoLer = library.filter((m) => m.status === 'Planejo Ler');
 
   if (isLoading) {
     return (

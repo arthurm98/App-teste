@@ -25,28 +25,22 @@ export function EditMangaDialog({ isOpen, onOpenChange, manga }: EditMangaDialog
   const { updateMangaDetails } = useLibrary();
   const [readChapters, setReadChapters] = useState(manga.readChapters);
   const [totalChapters, setTotalChapters] = useState(manga.totalChapters);
-  const [latestChapter, setLatestChapter] = useState(manga.latestChapter);
-
 
   // Garante que o estado seja atualizado se o manga prop mudar
   useEffect(() => {
     if (isOpen) {
       setReadChapters(manga.readChapters);
       setTotalChapters(manga.totalChapters);
-      setLatestChapter(manga.latestChapter);
     }
   }, [isOpen, manga]);
 
   const handleSave = () => {
-    // Conforme a regra, não há validação. O sistema confia no usuário.
     const newRead = Number(readChapters);
     const newTotal = Number(totalChapters);
-    const newLatest = Number(latestChapter);
     
     updateMangaDetails(manga.id, { 
       readChapters: newRead,
       totalChapters: newTotal,
-      latestChapter: newLatest,
     });
     onOpenChange(false);
   };
@@ -83,19 +77,6 @@ export function EditMangaDialog({ isOpen, onOpenChange, manga }: EditMangaDialog
               type="number"
               value={totalChapters}
               onChange={(e) => setTotalChapters(Number(e.target.value))}
-              className="col-span-3"
-              min="0"
-            />
-          </div>
-           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="latestChapter" className="text-right">
-              Último Cap. Disponível
-            </Label>
-            <Input
-              id="latestChapter"
-              type="number"
-              value={latestChapter}
-              onChange={(e) => setLatestChapter(Number(e.target.value))}
               className="col-span-3"
               min="0"
             />
