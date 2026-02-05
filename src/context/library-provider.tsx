@@ -270,14 +270,10 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     if (!manga) return;
 
     const newRead = Math.max(0, newChapter);
-    let newStatus = manga.status;
     
-    // Move para 'Lendo' ao começar a ler, mas NUNCA muda de status de outra forma.
-    if (manga.status === 'Planejo Ler' && newRead > 0) {
-      newStatus = 'Lendo';
-    }
-
-    updateLibraryItem(mangaId, { readChapters: newRead, status: newStatus });
+    // Esta função agora APENAS atualiza o número de capítulos.
+    // A mudança de status é uma ação manual e separada do usuário.
+    updateLibraryItem(mangaId, { readChapters: newRead });
   }, [library, updateLibraryItem]);
   
   const updateStatus = useCallback((mangaId: string, newStatus: MangaStatus) => {
