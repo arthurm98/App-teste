@@ -3,6 +3,7 @@ import { Timestamp } from "firebase/firestore";
 
 export type MangaStatus = "Lendo" | "Planejo Ler" | "Completo";
 export type MangaType = "Mangá" | "Manhwa" | "Webtoon" | "Novel" | "Outro";
+export type PublicationStatus = "Finished" | "Publishing" | "Unknown";
 
 /**
  * Representa um título na biblioteca do usuário.
@@ -14,6 +15,9 @@ export type Manga = {
   type: MangaType;
   /** O status de leitura definido pelo usuário. Determina em qual aba a obra aparece. */
   status: MangaStatus;
+  
+  /** O status de publicação oficial da obra. */
+  publicationStatus: PublicationStatus;
   
   /** O número total de capítulos da obra, definido pelo usuário. */
   totalChapters: number;

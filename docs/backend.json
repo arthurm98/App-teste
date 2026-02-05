@@ -58,6 +58,11 @@
           "enum": ["Lendo", "Planejo Ler", "Completo"],
           "description": "The reading status of the manga."
         },
+        "publicationStatus": {
+            "type": "string",
+            "enum": ["Finished", "Publishing", "Unknown"],
+            "description": "The official publication status of the series (e.g., 'Finished', 'Publishing')."
+        },
         "totalChapters": {
           "type": "number",
           "description": "The total number of chapters."
@@ -89,6 +94,7 @@
         "title",
         "type",
         "status",
+        "publicationStatus",
         "totalChapters",
         "readChapters",
         "createdAt",

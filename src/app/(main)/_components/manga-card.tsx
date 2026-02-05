@@ -63,6 +63,14 @@ export function MangaCard({ manga }: MangaCardProps) {
             />
           )}
           <Badge variant="secondary" className="absolute top-2 left-2">{manga.type}</Badge>
+          {manga.publicationStatus && manga.publicationStatus !== 'Unknown' && (
+            <Badge
+              variant={manga.publicationStatus === 'Publishing' ? 'default' : 'secondary'}
+              className="absolute bottom-2 left-2"
+            >
+              {manga.publicationStatus === 'Publishing' ? 'Em Andamento' : 'Finalizado'}
+            </Badge>
+          )}
           <div className="absolute top-1 right-1">
               <DropdownMenu>
                   <DropdownMenuTrigger asChild>
