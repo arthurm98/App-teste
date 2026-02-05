@@ -2,6 +2,7 @@
 import { JikanManga } from "@/lib/jikan-data";
 import { KitsuManga } from "@/lib/kitsu-data";
 import { AniListManga } from "@/lib/anilist-data";
+import { getLatestChapter } from "@/ai/flows/get-latest-chapter-flow";
 
 
 interface MangaUpdateInfo {
@@ -95,7 +96,7 @@ export async function getLatestMangaInfo(mangaId: string, title: string): Promis
     ];
 
     // Tenta a fonte primária (Jikan/Anilist ID se for um número)
-    if (!isNaN(Number(mangaId))) {
+    if (mangaId && !isNaN(Number(mangaId))) {
         const primaryInfo = await getInfoFromJikan(mangaId);
         if (primaryInfo) return primaryInfo;
     }
@@ -113,6 +114,22 @@ export async function getLatestMangaInfo(mangaId: string, title: string): Promis
             console.warn(`A fallback searcher failed for "${title}"`, error);
         }
     }
+
+    // Se todas as APIs tradicionais falharem, use o fluxo de IA
+    try {
+        console.log(`All traditional APIs failed for "${title}". Trying AI...`);
+        const aiResult = await getLatestChapter(title);
+        if (aiResult && (aiResult.latestChapter || aiResult.totalChapters)) {
+            console.log(`AI successful for "${title}"`);
+            return {
+                latestChapter: aiResult.latestChapter || null,
+                totalChapters: aiResult.totalChapters || null,
+            };
+        }
+    } catch (error) {
+        console.error(`AI flow failed for title ${title}:`, error);
+    }
+
 
     console.log(`All update checks failed for "${title}".`);
     return null;
