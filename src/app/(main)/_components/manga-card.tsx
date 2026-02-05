@@ -29,10 +29,14 @@ export function MangaCard({ manga }: MangaCardProps) {
   const [isImageError, setIsImageError] = useState(false);
 
   const imageUrl = manga.imageUrl || "https://picsum.photos/seed/placeholder/400/600";
-  const progress = manga.totalChapters > 0 ? (manga.readChapters / manga.totalChapters) * 100 : 0;
+  
+  // Define a fonte da verdade para o progresso. Usa `latestChapter` se disponível, senão `totalChapters`.
+  const progressDenominator = manga.latestChapter > 0 ? manga.latestChapter : manga.totalChapters;
+  const progress = progressDenominator > 0 ? (manga.readChapters / progressDenominator) * 100 : 0;
 
   const handleChapterChange = (amount: number) => {
-    const newChapter = Math.max(0, Math.min(manga.totalChapters, manga.readChapters + amount));
+    // Garante que o progresso não ultrapasse o denominador de progresso
+    const newChapter = Math.max(0, Math.min(progressDenominator, manga.readChapters + amount));
     updateChapter(manga.id, newChapter);
   };
   
@@ -99,24 +103,24 @@ export function MangaCard({ manga }: MangaCardProps) {
           <CardTitle className="font-headline text-base leading-tight truncate mb-2" title={manga.title}>
               {manga.title}
           </CardTitle>
-          {manga.status !== "Planejo Ler" && manga.totalChapters > 0 && (
+          {manga.status !== "Planejo Ler" && progressDenominator > 0 && (
               <div className="mt-auto space-y-2">
                   <div className="flex justify-between items-center text-xs text-muted-foreground">
                       <span>Progresso ({progress.toFixed(0)}%)</span>
-                      <span>{`${manga.readChapters} / ${manga.totalChapters}`}</span>
+                      <span>{`${manga.readChapters} / ${progressDenominator}`}</span>
                   </div>
                   <Progress value={progress} aria-label={`${progress.toFixed(0)}% lido`} />
                   <div className="flex justify-between items-center gap-2 pt-1">
                       <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleChapterChange(-1)} disabled={manga.readChapters <= 0}>
                           <Minus className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleChapterChange(1)} disabled={manga.readChapters >= manga.totalChapters}>
+                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => handleChapterChange(1)} disabled={manga.readChapters >= progressDenominator}>
                           <Plus className="h-4 w-4" />
                       </Button>
                   </div>
               </div>
           )}
-           {manga.status !== "Planejo Ler" && manga.totalChapters === 0 && (
+           {manga.status !== "Planejo Ler" && progressDenominator === 0 && (
                <div className="flex-grow flex items-center justify-center">
                     <Button variant="secondary" size="sm" onClick={() => setIsEditDialogOpen(true)}>
                         <Plus className="mr-2 h-4 w-4" /> Adicionar Caps.
@@ -140,5 +144,3 @@ export function MangaCard({ manga }: MangaCardProps) {
     </>
   );
 }
-
-    

@@ -300,23 +300,18 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     if (!manga) return;
 
     const updates: Partial<Manga> = { readChapters: newChapter };
-    let shouldShowCompletedToast = false;
 
-    if (manga.totalChapters > 0 && newChapter >= manga.totalChapters && manga.status !== 'Completo') {
-      updates.status = 'Completo';
-      shouldShowCompletedToast = true;
-    } else if (newChapter > 0 && manga.status === 'Planejo Ler') {
+    // Não marca mais como "Completo" automaticamente. O usuário deve fazer isso manualmente.
+    // Apenas muda o status para "Lendo" se ele começar a ler um título que estava planejando.
+    if (newChapter > 0 && manga.status === 'Planejo Ler') {
       updates.status = 'Lendo';
     } else if (newChapter <= 0 && manga.status === 'Lendo') {
+      // Volta para 'Planejo Ler' se o progresso for zerado
       updates.status = 'Planejo Ler';
     }
     
     updateLibraryItem(mangaId, updates);
-
-    if (shouldShowCompletedToast) {
-      toast({ title: "Título Concluído!", description: `Você terminou de ler ${manga.title}.` });
-    }
-  }, [library, toast, updateLibraryItem]);
+  }, [library, updateLibraryItem]);
 
   const updateStatus = useCallback((mangaId: string, newStatus: MangaStatus) => {
     const manga = library.find(m => m.id === mangaId);
@@ -339,12 +334,11 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
      
      const updates: Partial<Manga> = {...details};
      
-     if (details.totalChapters !== undefined && manga.readChapters > details.totalChapters) {
+     // Se o novo total for menor que os capítulos lidos, ajusta os lidos para o novo total.
+     if (details.totalChapters !== undefined && manga.readChapters > details.totalChapters && details.totalChapters > 0) {
         updates.readChapters = details.totalChapters;
      }
-     if (details.totalChapters !== undefined && manga.readChapters === details.totalChapters && manga.totalChapters > 0) {
-        updates.status = 'Completo';
-     }
+     // Não infere mais o status "Completo" automaticamente.
 
      updateLibraryItem(mangaId, updates);
      toast({ title: "Detalhes Atualizados", description: `As informações de "${manga.title}" foram salvas.` });

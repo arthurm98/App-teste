@@ -42,12 +42,12 @@ export function EditMangaDialog({ isOpen, onOpenChange, manga }: EditMangaDialog
       toast({
         variant: "destructive",
         title: "Valor Inválido",
-        description: "Por favor, insira um número válido para o total de capítulos.",
+        description: "Por favor, insira um número válido para os capítulos totais.",
       });
       return;
     }
     
-    if (newTotalChapters < manga.readChapters) {
+    if (newTotalChapters < manga.readChapters && newTotalChapters > 0) {
        toast({
         variant: "destructive",
         title: "Valor Inválido",
@@ -72,7 +72,7 @@ export function EditMangaDialog({ isOpen, onOpenChange, manga }: EditMangaDialog
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="totalChapters" className="text-right">
-              Total de Capítulos
+              Capítulos Totais (Final)
             </Label>
             <Input
               id="totalChapters"
