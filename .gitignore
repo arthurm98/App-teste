@@ -39,4 +39,6 @@ next-env.d.ts
 
 # studio
 .studio/
-public/sw.js\npublic/sw.js.map\npublic/workbox-*.js
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
