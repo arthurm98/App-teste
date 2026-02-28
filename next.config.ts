@@ -1,5 +1,6 @@
 
 import type {NextConfig} from 'next';
+// @ts-ignore
 import withPWA from 'next-pwa';
 
 const nextConfig: NextConfig = {
@@ -65,6 +66,7 @@ const pwaConfig = {
   disable: process.env.NODE_ENV === 'development',
 };
 
+// @ts-ignore
 export default withPWA(pwaConfig)(nextConfig);
 
     

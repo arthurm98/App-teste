@@ -23,7 +23,7 @@ async function getInfoFromJikan(mangaId: string, title?: string): Promise<MangaU
         const manga: JikanManga = mangaId ? data.data : (data.data || [])[0];
 
         if (manga) {
-            return { totalChapters: manga.chapters, latestChapter: manga.chapters };
+            return { totalChapters: manga.chapters ?? null, latestChapter: manga.chapters ?? null };
         }
     } catch (error) {
         console.error(`Jikan API request failed for mangaId ${mangaId}:`, error);
@@ -41,7 +41,7 @@ async function getInfoFromKitsu(title: string): Promise<MangaUpdateInfo | null> 
         const manga: KitsuManga = (data.data || [])[0];
         
         if (manga) {
-            return { totalChapters: manga.attributes.chapterCount, latestChapter: manga.attributes.chapterCount };
+            return { totalChapters: manga.attributes.chapterCount ?? null, latestChapter: manga.attributes.chapterCount ?? null };
         }
     } catch (error) {
         console.error(`Kitsu API request failed for title ${title}:`, error);
@@ -75,7 +75,7 @@ async function getInfoFromAniList(title: string): Promise<MangaUpdateInfo | null
         const manga: AniListManga = data.data?.Media;
 
         if (manga) {
-            return { totalChapters: manga.chapters, latestChapter: manga.chapters };
+            return { totalChapters: manga.chapters ?? null, latestChapter: manga.chapters ?? null };
         }
     } catch (error) {
         console.error(`AniList API request failed for title ${title}:`, error);
