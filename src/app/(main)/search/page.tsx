@@ -114,7 +114,6 @@ export default function SearchPage() {
       try {
         const cachedData = sessionStorage.getItem(cacheKey);
         if (cachedData) {
-          console.log("Servindo resultados do cache para:", debouncedSearchTerm);
           startTransition(() => {
              setSearchResults(JSON.parse(cachedData));
           });
