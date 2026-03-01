@@ -52,10 +52,10 @@ function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
     },
     title: manga.attributes.canonicalTitle,
     type: normalizeMangaType(manga.attributes.mangaType),
-    chapters: manga.attributes.chapterCount,
+    chapters: manga.attributes.chapterCount ?? null,
     status: manga.attributes.status,
     score: manga.attributes.averageRating ? parseFloat(manga.attributes.averageRating) / 10 : null,
-    synopsis: manga.attributes.synopsis,
+    synopsis: manga.attributes.synopsis ?? null,
     genres: [], // A API de busca da Kitsu não inclui gêneros
   };
 }
@@ -69,12 +69,12 @@ function adaptAniListToJikan(manga: AniListManga): JikanManga {
             jpg: { image_url: imageUrl, small_image_url: imageUrl, large_image_url: imageUrl },
             webp: { image_url: imageUrl, small_image_url: imageUrl, large_image_url: imageUrl },
         },
-        title: manga.title.romaji || manga.title.english || manga.title.native,
+        title: manga.title.romaji || manga.title.english || manga.title.native || "",
         type: normalizeMangaType(manga.format),
         chapters: manga.chapters,
         status: manga.status,
         score: manga.averageScore ? manga.averageScore / 10 : null, // AniList score é de 0-100
-        synopsis: manga.description,
+        synopsis: manga.description ?? null,
         genres: manga.genres.map(genre => ({ mal_id: 0, type: 'manga', name: genre, url: '' })),
     };
 }
