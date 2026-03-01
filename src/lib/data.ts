@@ -16,6 +16,8 @@ export type Manga = {
   imageUrl?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  lastUpdateCheckAt?: Timestamp;
+  updateFailureCount?: number;
 };
 
 // A biblioteca inicial foi removida. Os dados serão carregados da nuvem ou do localStorage.

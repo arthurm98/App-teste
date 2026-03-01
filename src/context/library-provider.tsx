@@ -31,6 +31,8 @@ const LOCAL_STORAGE_KEY = 'mangatrack-library';
 const NOTIFICATIONS_KEY = 'mangatrack-notifications';
 const UPDATE_INTERVAL_DAYS = 7;
 const LAST_CHECK_KEY = 'mangatrack-last-check';
+const UPDATE_CHECK_CONCURRENCY = 4;
+const MIN_RECHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 const addNotification = (mangaTitle: string, message: string) => {
     const newNotification: Notification = {
@@ -96,49 +98,86 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }
   }, [user, firestore]);
   
-  const performUpdateCheck = useCallback((mangasToCheck: Manga[]) => {
-      console.log(`Iniciando verificação de ${mangasToCheck.length} mangás...`);
+  const performUpdateCheck = useCallback(async (mangasToCheck: Manga[]) => {
+      const now = Date.now();
+      const prioritizedMangas = mangasToCheck
+        .filter((manga) => {
+          const lastCheckedAt = manga.lastUpdateCheckAt?.toDate()?.getTime() ?? 0;
+          return now - lastCheckedAt >= MIN_RECHECK_INTERVAL_MS;
+        })
+        .sort((a, b) => {
+          const aPriority = a.status === 'Lendo' ? 2 : 0;
+          const bPriority = b.status === 'Lendo' ? 2 : 0;
+          const aGap = Math.max((a.latestChapter || a.totalChapters || 0) - (a.readChapters || 0), 0);
+          const bGap = Math.max((b.latestChapter || b.totalChapters || 0) - (b.readChapters || 0), 0);
+          const aScore = aPriority + (aGap <= 2 ? 1 : 0);
+          const bScore = bPriority + (bGap <= 2 ? 1 : 0);
+          return bScore - aScore;
+        });
+
+      console.log(`Iniciando verificação de ${prioritizedMangas.length} mangás (de ${mangasToCheck.length})...`);
       let updatesFound = 0;
 
-      const promises = mangasToCheck.map(mangaData => 
-        getLatestMangaInfo(mangaData.id, mangaData.title).then(latestInfo => {
-            if (latestInfo) {
-                const currentLatest = mangaData.latestChapter || mangaData.readChapters;
-                let hasUpdate = false;
-                const updates: Partial<Manga> = {};
-                let notificationMessage = '';
+      const checkMangaUpdate = async (mangaData: Manga) => {
+        const checkTimestamp = Timestamp.now();
+        try {
+          const latestInfo = await getLatestMangaInfo(mangaData.id, mangaData.title);
 
-                // Verifica se o capítulo mais recente da API é maior que o último que conhecíamos
-                if (latestInfo.latestChapter && latestInfo.latestChapter > currentLatest) {
-                    updates.totalChapters = Math.max(mangaData.totalChapters || 0, latestInfo.latestChapter);
-                    updates.latestChapter = latestInfo.latestChapter; // Atualiza nosso conhecimento
-                    hasUpdate = true;
-                    notificationMessage = `Novo capítulo detectado: ${latestInfo.latestChapter}.`;
-                } else if (latestInfo.totalChapters && latestInfo.totalChapters > mangaData.totalChapters) {
-                    updates.totalChapters = latestInfo.totalChapters;
-                    hasUpdate = true;
-                    notificationMessage = `Total de capítulos atualizado para ${latestInfo.totalChapters}.`;
-                }
-                
-                if (hasUpdate) {
-                    updatesFound++;
-                    updateLibraryItem(mangaData.id, updates);
-                    addNotification(mangaData.title, notificationMessage);
-                }
-            }
-        })
-      );
-      
-      Promise.all(promises).then(() => {
-        if (updatesFound > 0) {
-            toast({
-                title: "Novos Capítulos Encontrados",
-                description: `A verificação encontrou atualizações para ${updatesFound} título(s). Confira o log de notificações.`,
+          if (!latestInfo) {
+            updateLibraryItem(mangaData.id, {
+              lastUpdateCheckAt: checkTimestamp,
+              updateFailureCount: (mangaData.updateFailureCount || 0) + 1,
             });
+            return;
+          }
+
+          const currentLatest = mangaData.latestChapter || mangaData.readChapters;
+          let hasUpdate = false;
+          const updates: Partial<Manga> = {
+            lastUpdateCheckAt: checkTimestamp,
+            updateFailureCount: 0,
+          };
+          let notificationMessage = '';
+
+          // Verifica se o capítulo mais recente da API é maior que o último que conhecíamos
+          if (latestInfo.latestChapter && latestInfo.latestChapter > currentLatest) {
+              updates.totalChapters = Math.max(mangaData.totalChapters || 0, latestInfo.latestChapter);
+              updates.latestChapter = latestInfo.latestChapter; // Atualiza nosso conhecimento
+              hasUpdate = true;
+              notificationMessage = `Novo capítulo detectado: ${latestInfo.latestChapter}.`;
+          } else if (latestInfo.totalChapters && latestInfo.totalChapters > mangaData.totalChapters) {
+              updates.totalChapters = latestInfo.totalChapters;
+              hasUpdate = true;
+              notificationMessage = `Total de capítulos atualizado para ${latestInfo.totalChapters}.`;
+          }
+
+          updateLibraryItem(mangaData.id, updates);
+          if (hasUpdate) {
+              updatesFound++;
+              addNotification(mangaData.title, notificationMessage);
+          }
+        } catch (error) {
+          console.error(`Falha ao verificar atualizações de ${mangaData.title}:`, error);
+          updateLibraryItem(mangaData.id, {
+            lastUpdateCheckAt: checkTimestamp,
+            updateFailureCount: (mangaData.updateFailureCount || 0) + 1,
+          });
         }
-        localStorage.setItem(LAST_CHECK_KEY, new Date().toISOString());
-        console.log("Verificação de atualização concluída.");
-      });
+      };
+
+      for (let i = 0; i < prioritizedMangas.length; i += UPDATE_CHECK_CONCURRENCY) {
+        const chunk = prioritizedMangas.slice(i, i + UPDATE_CHECK_CONCURRENCY);
+        await Promise.all(chunk.map(checkMangaUpdate));
+      }
+
+      if (updatesFound > 0) {
+          toast({
+              title: "Novos Capítulos Encontrados",
+              description: `A verificação encontrou atualizações para ${updatesFound} título(s). Confira o log de notificações.`,
+          });
+      }
+      localStorage.setItem(LAST_CHECK_KEY, new Date().toISOString());
+      console.log("Verificação de atualização concluída.");
 
   }, [updateLibraryItem, toast]);
 
