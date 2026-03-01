@@ -52,10 +52,10 @@ function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
     },
     title: manga.attributes.canonicalTitle,
     type: normalizeMangaType(manga.attributes.mangaType),
-    chapters: manga.attributes.chapterCount,
+    chapters: manga.attributes.chapterCount ?? null,
     status: manga.attributes.status,
     score: manga.attributes.averageRating ? parseFloat(manga.attributes.averageRating) / 10 : null,
-    synopsis: manga.attributes.synopsis,
+    synopsis: manga.attributes.synopsis ?? null,
     genres: [], // A API de busca da Kitsu não inclui gêneros
   };
 }
@@ -69,14 +69,95 @@ function adaptAniListToJikan(manga: AniListManga): JikanManga {
             jpg: { image_url: imageUrl, small_image_url: imageUrl, large_image_url: imageUrl },
             webp: { image_url: imageUrl, small_image_url: imageUrl, large_image_url: imageUrl },
         },
-        title: manga.title.romaji || manga.title.english || manga.title.native,
+        title: manga.title.romaji || manga.title.english || manga.title.native || "",
         type: normalizeMangaType(manga.format),
         chapters: manga.chapters,
         status: manga.status,
         score: manga.averageScore ? manga.averageScore / 10 : null, // AniList score é de 0-100
-        synopsis: manga.description,
+        synopsis: manga.description ?? null,
         genres: manga.genres.map(genre => ({ mal_id: 0, type: 'manga', name: genre, url: '' })),
     };
+}
+
+async function searchJikan(term: string, signal: AbortSignal): Promise<JikanManga[]> {
+  const response = await fetch(`https://api.jikan.moe/v4/manga?q=${encodeURIComponent(term)}&sfw`, { signal });
+  if (!response.ok) {
+    throw new Error(`Status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const jikanResults = (data.data || []) as JikanManga[];
+  return jikanResults.map((m) => ({ ...m, type: normalizeMangaType(m.type) }));
+}
+
+async function searchKitsu(term: string, signal: AbortSignal): Promise<JikanManga[]> {
+  const kitsuResponse = await fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(term)}`, {
+    signal,
+  });
+  if (!kitsuResponse.ok) {
+    throw new Error(`Status: ${kitsuResponse.status}`);
+  }
+
+  const kitsuData = await kitsuResponse.json();
+  if (kitsuData.data && kitsuData.data.length > 0) {
+    return kitsuData.data.map(adaptKitsuToJikan);
+  }
+
+  return [];
+}
+
+async function searchAniList(term: string, signal: AbortSignal): Promise<JikanManga[]> {
+  const query = `
+    query ($search: String, $type: MediaType) {
+      Page(page: 1, perPage: 20) {
+        media(search: $search, type: $type, sort: [SEARCH_MATCH]) {
+          id
+          title {
+            romaji
+            english
+            native
+          }
+          coverImage {
+            extraLarge
+            large
+            color
+          }
+          format
+          status
+          description(asHtml: false)
+          chapters
+          averageScore
+          genres
+          siteUrl
+        }
+      }
+    }
+  `;
+  const variables = {
+    search: term,
+    type: "MANGA",
+  };
+
+  const response = await fetch("https://graphql.anilist.co", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      query,
+      variables,
+    }),
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Status: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const anilistResults = (data.data?.Page?.media || []) as AniListManga[];
+  return anilistResults.map(adaptAniListToJikan);
 }
 
 export default function SearchPage() {
@@ -104,17 +185,23 @@ export default function SearchPage() {
   }, [searchTerm]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
     const fetchMangas = async () => {
       if (debouncedSearchTerm.trim().length < 3) {
         setSearchResults([]);
+        setIsSearching(false);
         return;
       }
 
-      const cacheKey = `${CACHE_PREFIX}${apiSource}_${debouncedSearchTerm.trim().toLowerCase()}`;
+      const normalizedTerm = debouncedSearchTerm.trim();
+
+      const cacheKey = `${CACHE_PREFIX}${apiSource}_${normalizedTerm.toLowerCase()}`;
       try {
         const cachedData = sessionStorage.getItem(cacheKey);
         if (cachedData) {
-          console.log("Servindo resultados do cache para:", debouncedSearchTerm);
+          console.log("Servindo resultados do cache para:", normalizedTerm);
           startTransition(() => {
              setSearchResults(JSON.parse(cachedData));
           });
@@ -128,107 +215,50 @@ export default function SearchPage() {
       let results: JikanManga[] = [];
       const failedApis: string[] = [];
 
-      const searchJikan = async () => {
+      const runJikanSearch = async () => {
         try {
-          const response = await fetch(`https://api.jikan.moe/v4/manga?q=${encodeURIComponent(debouncedSearchTerm.trim())}&sfw`);
-          if (response.ok) {
-            const data = await response.json();
-            const jikanResults = (data.data || []) as JikanManga[];
-            return jikanResults.map(m => ({...m, type: normalizeMangaType(m.type)}));
-          }
-          throw new Error(`Status: ${response.status}`);
-        } catch (error) { 
+          return await searchJikan(normalizedTerm, signal);
+        } catch (error) {
+          if ((error as Error).name === "AbortError") return [];
           console.warn("Jikan API request failed:", error);
           failedApis.push("Jikan");
+          return [];
         }
-        return [];
       };
 
-      const searchKitsu = async () => {
+      const runKitsuSearch = async () => {
         try {
-          const kitsuResponse = await fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(debouncedSearchTerm.trim())}`);
-           if (!kitsuResponse.ok) {
-            throw new Error(`Status: ${kitsuResponse.status}`);
-          }
-            const kitsuData = await kitsuResponse.json();
-            if (kitsuData.data && kitsuData.data.length > 0) {
-              return kitsuData.data.map(adaptKitsuToJikan);
-            }
-            return [];
-        } catch (error) { 
+          return await searchKitsu(normalizedTerm, signal);
+        } catch (error) {
+          if ((error as Error).name === "AbortError") return [];
           console.warn("Kitsu API request failed:", error);
           failedApis.push("Kitsu");
+          return [];
         }
-        return [];
       };
 
-      const searchAniList = async () => {
-        const query = `
-          query ($search: String, $type: MediaType) {
-            Page(page: 1, perPage: 20) {
-              media(search: $search, type: $type, sort: [SEARCH_MATCH]) {
-                id
-                title {
-                  romaji
-                  english
-                  native
-                }
-                coverImage {
-                  extraLarge
-                  large
-                  color
-                }
-                format
-                status
-                description(asHtml: false)
-                chapters
-                averageScore
-                genres
-                siteUrl
-              }
-            }
-          }
-        `;
-        const variables = {
-          search: debouncedSearchTerm.trim(),
-          type: 'MANGA',
-        };
+      const runAniListSearch = async () => {
         try {
-          const response = await fetch('https://graphql.anilist.co', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-              query,
-              variables,
-            }),
-          });
-          if (response.ok) {
-            const data = await response.json();
-            const anilistResults = (data.data?.Page?.media || []) as AniListManga[];
-            return anilistResults.map(adaptAniListToJikan);
-          }
-           throw new Error(`Status: ${response.status}`);
+          return await searchAniList(normalizedTerm, signal);
         } catch (error) {
+          if ((error as Error).name === "AbortError") return [];
           console.warn("AniList API request failed:", error);
           failedApis.push("AniList");
+          return [];
         }
-        return [];
       };
       
       if (apiSource === "Jikan") {
-        results = await searchJikan();
+        results = await runJikanSearch();
       } else if (apiSource === "Kitsu") {
-        results = await searchKitsu();
+        results = await runKitsuSearch();
       } else if (apiSource === "AniList") {
-        results = await searchAniList();
+        results = await runAniListSearch();
       } else { // Auto - Busca em paralelo e agrega os resultados
         const allSearches = await Promise.allSettled([
-            searchJikan(),
-            searchKitsu(),
-            searchAniList(),
+            runJikanSearch(),
+            runKitsuSearch(),
+            runAniListSearch(),
         ]);
 
         let combinedResults: JikanManga[] = [];
@@ -252,6 +282,10 @@ export default function SearchPage() {
         // Ordena os resultados por score (se disponível), do maior para o menor
         results.sort((a, b) => (b.score || 0) - (a.score || 0));
       }
+
+      if (signal.aborted) {
+        return;
+      }
       
       if (results.length === 0) {
         let description = "Nenhum título foi encontrado com esse termo. Tente outra palavra-chave.";
@@ -266,6 +300,10 @@ export default function SearchPage() {
      }
 
       startTransition(() => {
+        if (signal.aborted) {
+          return;
+        }
+
         setSearchResults(results);
         if (results.length > 0) {
           try {
@@ -275,10 +313,19 @@ export default function SearchPage() {
           }
         }
       });
+
+      if (signal.aborted) {
+        return;
+      }
+
       setIsSearching(false);
     };
 
     fetchMangas();
+
+    return () => {
+      controller.abort();
+    };
   }, [debouncedSearchTerm, toast, apiSource]);
 
   const isLoading = isSearching || isPending;
