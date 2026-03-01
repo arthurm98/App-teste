@@ -37,7 +37,7 @@ Para executar o MangaTrack em seu ambiente de desenvolvimento, siga os passos ab
 ### Pré-requisitos
 
 - [Node.js](https://nodejs.org/) (versão 18 ou superior)
-- [npm](https://www.npmjs.com/) ou [yarn](https://yarnpkg.com/)
+- [npm](https://www.npmjs.com/) (versão 9 ou superior)
 
 ### 1. Clone o Repositório
 
@@ -70,21 +70,35 @@ NEXT_PUBLIC_FIREBASE_APP_ID="1:12345...:web:abcdef..."
 
 ### 3. Instale as Dependências
 
-Na raiz do projeto, execute o comando para instalar todos os pacotes necessários:
+> **Fonte de verdade de dependências:** este projeto usa **apenas o `package.json` da raiz**. O arquivo `src/package.json` foi removido para evitar divergência entre ambientes.
+
+Na raiz do projeto, execute:
 
 ```bash
 npm install
 ```
 
-### 4. Rode o Servidor de Desenvolvimento
+Isso atualiza o `package-lock.json` da raiz, que também deve ser usado no CI com `npm ci`.
 
-Com tudo configurado, inicie a aplicação:
+### 4. Rode o Servidor de Desenvolvimento
 
 ```bash
 npm run dev
 ```
 
 A aplicação estará disponível em [http://localhost:9002](http://localhost:9002).
+
+### 5. Scripts úteis (todos na raiz)
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+npm run ci:check
+npm run genkit:dev
+```
+
+> **CI recomendado:** executar `npm ci` e depois `npm run ci:check`, sempre na raiz do repositório.
 
 ## 📄 Licença
 
