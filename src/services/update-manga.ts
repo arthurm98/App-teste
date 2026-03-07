@@ -86,8 +86,6 @@ async function getInfoFromAniList(title: string): Promise<MangaUpdateInfo | null
 // Função principal que tenta buscar em várias APIs em cascata.
 export async function getLatestMangaInfo(mangaId: string, title: string): Promise<MangaUpdateInfo | null> {
     
-    console.log("Searching for manga updates using traditional APIs...");
-
     const fallbackSearchers = [
         () => getInfoFromJikan('', title),
         () => getInfoFromKitsu(title),
@@ -105,7 +103,6 @@ export async function getLatestMangaInfo(mangaId: string, title: string): Promis
         try {
             const result = await searcher();
             if (result && (result.totalChapters || result.latestChapter)) {
-                console.log(`Fallback successful for "${title}"`);
                 return result;
             }
         } catch (error) {
@@ -114,6 +111,5 @@ export async function getLatestMangaInfo(mangaId: string, title: string): Promis
         }
     }
 
-    console.log(`All update checks failed for "${title}".`);
     return null;
 }
