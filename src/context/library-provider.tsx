@@ -5,6 +5,7 @@ import React, { createContext, useState, ReactNode, useEffect, useCallback, useM
 import { collection, doc, onSnapshot, writeBatch, Timestamp, Firestore, Unsubscribe } from 'firebase/firestore';
 import { Manga, MangaStatus, MangaType } from '@/lib/data';
 import { JikanManga } from '@/lib/jikan-data';
+import { getTimestampMillis, normalizeBackupLibrary } from '@/lib/backup-schema';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -69,7 +70,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     try {
       const savedLibrary = window.localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedLibrary) {
-        setLocalLibrary(JSON.parse(savedLibrary));
+        setLocalLibrary(normalizeBackupLibrary(JSON.parse(savedLibrary)));
       }
     } catch (error) {
       console.error("Erro ao carregar a biblioteca do localStorage", error);
@@ -102,7 +103,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       const now = Date.now();
       const prioritizedMangas = mangasToCheck
         .filter((manga) => {
-          const lastCheckedAt = manga.lastUpdateCheckAt?.toDate()?.getTime() ?? 0;
+          const lastCheckedAt = getTimestampMillis(manga.lastUpdateCheckAt) ?? 0;
           return now - lastCheckedAt >= MIN_RECHECK_INTERVAL_MS;
         })
         .sort((a, b) => {
