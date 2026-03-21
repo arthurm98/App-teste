@@ -11,15 +11,22 @@ export function StatsCards() {
   const { library } = useLibrary()
 
   const stats = React.useMemo(() => {
-    const totalTitles = library.length
-    const completedTitles = library.filter(m => m.status === 'Completo').length
-    const totalChaptersRead = library.reduce((acc, m) => acc + m.readChapters, 0)
-    
-    const typeCounts = library.reduce((acc, m) => {
-        const type = m.type as MangaType;
-        acc[type] = (acc[type] || 0) + 1
+    const { completedTitles, totalChaptersRead, typeCounts } = library.reduce(
+      (acc, m) => {
+        if (m.status === "Completo") acc.completedTitles++
+        acc.totalChaptersRead += m.readChapters
+        const type = m.type as MangaType
+        acc.typeCounts[type] = (acc.typeCounts[type] || 0) + 1
         return acc
-    }, {} as Record<MangaType, number>)
+      },
+      {
+        completedTitles: 0,
+        totalChaptersRead: 0,
+        typeCounts: {} as Record<MangaType, number>,
+      }
+    )
+
+    const totalTitles = library.length
 
     const mediaTypesString = [
         {count: typeCounts['Mangá'] || 0, label: 'Mangás'},
