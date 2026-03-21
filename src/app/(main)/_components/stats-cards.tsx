@@ -12,31 +12,39 @@ export function StatsCards() {
 
   const stats = React.useMemo(() => {
     const totalTitles = library.length
-    const completedTitles = library.filter(m => m.status === 'Completo').length
-    const totalChaptersRead = library.reduce((acc, m) => acc + m.readChapters, 0)
-    
-    const typeCounts = library.reduce((acc, m) => {
-        const type = m.type as MangaType;
-        acc[type] = (acc[type] || 0) + 1
-        return acc
-    }, {} as Record<MangaType, number>)
+    let completedTitles = 0
+    let totalChaptersRead = 0
+    const typeCounts: Record<MangaType, number> = {
+      'Mangá': 0,
+      'Manhwa': 0,
+      'Webtoon': 0,
+      'Novel': 0,
+      'Outro': 0
+    }
 
-    const mediaTypesString = [
-        {count: typeCounts['Mangá'] || 0, label: 'Mangás'},
-        {count: typeCounts['Manhwa'] || 0, label: 'Manhwas'},
-        {count: typeCounts['Webtoon'] || 0, label: 'Webtoons'},
-        {count: typeCounts['Novel'] || 0, label: 'Novels'},
-        {count: typeCounts['Outro'] || 0, label: 'Outros'},
-    ]
-    .filter(item => item.count > 0)
-    .map(item => `${item.count} ${item.label}`)
-    .join(' • ') || 'Nenhum tipo de mídia';
+    for (let i = 0; i < library.length; i++) {
+      const m = library[i]
+      if (m.status === 'Completo') {
+        completedTitles++
+      }
+      totalChaptersRead += m.readChapters
+      typeCounts[m.type as MangaType]++
+    }
+
+    const mediaTypes: string[] = []
+    if (typeCounts['Mangá'] > 0) mediaTypes.push(`${typeCounts['Mangá']} Mangás`)
+    if (typeCounts['Manhwa'] > 0) mediaTypes.push(`${typeCounts['Manhwa']} Manhwas`)
+    if (typeCounts['Webtoon'] > 0) mediaTypes.push(`${typeCounts['Webtoon']} Webtoons`)
+    if (typeCounts['Novel'] > 0) mediaTypes.push(`${typeCounts['Novel']} Novels`)
+    if (typeCounts['Outro'] > 0) mediaTypes.push(`${typeCounts['Outro']} Outros`)
+
+    const mediaTypesString = mediaTypes.join(' • ') || 'Nenhum tipo de mídia'
 
     return {
-        totalTitles,
-        completedTitles,
-        totalChaptersRead,
-        mediaTypesString
+      totalTitles,
+      completedTitles,
+      totalChaptersRead,
+      mediaTypesString
     }
   }, [library])
 
