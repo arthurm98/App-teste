@@ -1,7 +1,7 @@
 
-import { JikanManga } from "@/lib/jikan-data";
-import { KitsuManga } from "@/lib/kitsu-data";
-import { AniListManga } from "@/lib/anilist-data";
+import type { JikanManga } from "../lib/jikan-data.ts";
+import type { KitsuManga } from "../lib/kitsu-data.ts";
+import type { AniListManga } from "../lib/anilist-data.ts";
 
 
 interface MangaUpdateInfo {
