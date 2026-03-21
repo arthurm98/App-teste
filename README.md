@@ -48,16 +48,13 @@ cd mangatrack
 
 ### 2. Configure as Variáveis de Ambiente
 
-Para que a aplicação se conecte ao Firebase, você precisa de um projeto Firebase.
+A aplicação não possui mais nenhuma configuração Firebase embutida no código versionado. O arquivo `src/firebase/config.ts` apenas monta o objeto `firebaseConfig` a partir de variáveis `process.env.NEXT_PUBLIC_FIREBASE_*`, e `src/firebase/index.ts` interrompe a inicialização caso alguma variável obrigatória esteja ausente.
 
-1.  Acesse o [console do Firebase](https://console.firebase.google.com/) e crie um novo projeto.
-2.  Adicione um aplicativo da Web ao seu projeto.
-3.  Nas configurações do projeto, encontre suas credenciais de configuração do Firebase.
-4.  Crie um arquivo chamado `.env` na raiz do projeto e adicione suas credenciais, seguindo o formato do arquivo `.env.example` (que deve ser criado por você com o conteúdo abaixo).
+Para desenvolvimento local, crie um arquivo `.env.local` na raiz do projeto. Em outros ambientes compatíveis com Next.js, como CI ou produção, configure as mesmas variáveis diretamente no provedor de hospedagem.
 
-**Conteúdo do arquivo `.env`:**
-```
-# Substitua pelos dados do seu projeto Firebase
+**Variáveis obrigatórias:**
+
+```dotenv
 NEXT_PUBLIC_FIREBASE_API_KEY="AIza..."
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="seu-projeto.firebaseapp.com"
 NEXT_PUBLIC_FIREBASE_PROJECT_ID="seu-projeto"
@@ -66,9 +63,18 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="12345..."
 NEXT_PUBLIC_FIREBASE_APP_ID="1:12345...:web:abcdef..."
 ```
 
-> **Atenção:** O arquivo `src/firebase/config.ts` utiliza essas variáveis para configurar o Firebase. Certifique-se de que os nomes das variáveis no `.env` correspondem aos usados no código.
+> Se qualquer uma dessas variáveis estiver ausente, a aplicação lançará um erro em tempo de execução informando exatamente quais chaves precisam ser definidas.
 
-### 3. Instale as Dependências
+### 3. Migração da Configuração Antiga
+
+Se você utilizava um ambiente Firebase fixo em `src/firebase/config.ts`, migre esses valores para o ambiente antes de atualizar:
+
+1. Copie os valores antigos do Firebase para um arquivo local `.env.local`.
+2. Em produção, cadastre os mesmos valores como variáveis de ambiente no seu provedor.
+3. Remova qualquer credencial hardcoded remanescente do código versionado.
+4. Reinicie o servidor de desenvolvimento ou refaça o deploy para que o Next.js recarregue as variáveis.
+
+### 4. Instale as Dependências
 
 Na raiz do projeto, execute o comando para instalar todos os pacotes necessários:
 
@@ -76,7 +82,7 @@ Na raiz do projeto, execute o comando para instalar todos os pacotes necessário
 npm install
 ```
 
-### 4. Rode o Servidor de Desenvolvimento
+### 5. Rode o Servidor de Desenvolvimento
 
 Com tudo configurado, inicie a aplicação:
 

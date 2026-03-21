@@ -3,7 +3,16 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore } from 'firebase/firestore';
+
+const requiredFirebaseEnvVars = [
+  ['NEXT_PUBLIC_FIREBASE_API_KEY', firebaseConfig.apiKey],
+  ['NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', firebaseConfig.authDomain],
+  ['NEXT_PUBLIC_FIREBASE_PROJECT_ID', firebaseConfig.projectId],
+  ['NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', firebaseConfig.storageBucket],
+  ['NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', firebaseConfig.messagingSenderId],
+  ['NEXT_PUBLIC_FIREBASE_APP_ID', firebaseConfig.appId],
+] as const;
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -11,17 +20,13 @@ export function initializeFirebase() {
     return getSdks(getApp());
   }
 
-  // Check for environment variables
-  if (
-    !firebaseConfig.projectId ||
-    !firebaseConfig.appId ||
-    !firebaseConfig.apiKey ||
-    !firebaseConfig.authDomain
-  ) {
-    // If running locally without a .env.local file, this will fail.
-    // This is intentional to force the developer to set up their environment.
+  const missingEnvVars = requiredFirebaseEnvVars
+    .filter(([, value]) => !value)
+    .map(([envVar]) => envVar);
+
+  if (missingEnvVars.length > 0) {
     throw new Error(
-      'Firebase config is not set. Please create a .env.local file with your Firebase project credentials.'
+      `Firebase config is not set. Missing required environment variables: ${missingEnvVars.join(', ')}. Add them to .env.local for local development or configure them in your deployment environment.`
     );
   }
 
@@ -33,7 +38,7 @@ export function getSdks(firebaseApp: FirebaseApp) {
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+    firestore: getFirestore(firebaseApp),
   };
 }
 
