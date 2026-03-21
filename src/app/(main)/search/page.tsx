@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -17,69 +16,83 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MangaType } from "@/lib/data";
+import { createMangaLibraryId, type MangaType, type OnlineManga } from "@/lib/data";
 
 type ApiSource = "Auto" | "Jikan" | "Kitsu" | "AniList";
 
 const CACHE_PREFIX = "mangatrack_search_";
 
 function normalizeMangaType(type: string | null): MangaType {
-    const lowerType = type?.toLowerCase() || '';
-    if (lowerType.includes('manhwa') || lowerType.includes('manhua')) return 'Manhwa';
-    if (lowerType.includes('manga')) return 'Mangá';
-    if (lowerType.includes('webtoon')) return 'Webtoon';
-    if (lowerType.includes('novel')) return 'Novel';
-    if (lowerType.includes('oel') || lowerType.includes('doujinshi')) return 'Mangá';
-    return 'Outro';
+  const lowerType = type?.toLowerCase() || "";
+  if (lowerType.includes("manhwa") || lowerType.includes("manhua")) return "Manhwa";
+  if (lowerType.includes("manga")) return "Mangá";
+  if (lowerType.includes("webtoon")) return "Webtoon";
+  if (lowerType.includes("novel")) return "Novel";
+  if (lowerType.includes("oel") || lowerType.includes("doujinshi")) return "Mangá";
+  return "Outro";
 }
 
-function adaptKitsuToJikan(manga: KitsuManga): JikanManga {
-  const imageUrl = manga.attributes.posterImage?.original || "";
+function adaptJikanToOnlineManga(manga: JikanManga): OnlineManga {
+  const imageUrl = manga.images.webp.large_image_url || manga.images.webp.image_url || manga.images.jpg.large_image_url || manga.images.jpg.image_url;
+  const sourceId = String(manga.mal_id);
+
   return {
-    mal_id: 0, // Kitsu não fornece mal_id
-    url: `https://kitsu.io/manga/${manga.attributes.slug}`,
-    images: {
-      jpg: { 
-        image_url: imageUrl,
-        small_image_url: manga.attributes.posterImage?.small || "",
-        large_image_url: manga.attributes.posterImage?.large || "",
-       },
-      webp: { 
-        image_url: imageUrl,
-        small_image_url: manga.attributes.posterImage?.small || "",
-        large_image_url: manga.attributes.posterImage?.large || "",
-       },
-    },
-    title: manga.attributes.canonicalTitle,
-    type: normalizeMangaType(manga.attributes.mangaType),
-    chapters: manga.attributes.chapterCount ?? null,
-    status: manga.attributes.status,
-    score: manga.attributes.averageRating ? parseFloat(manga.attributes.averageRating) / 10 : null,
-    synopsis: manga.attributes.synopsis ?? null,
-    genres: [], // A API de busca da Kitsu não inclui gêneros
+    id: createMangaLibraryId("jikan", manga.title, sourceId),
+    sourceProvider: "jikan",
+    sourceId,
+    title: manga.title,
+    type: normalizeMangaType(manga.type),
+    totalChapters: manga.chapters || 0,
+    status: manga.status,
+    score: manga.score,
+    synopsis: manga.synopsis,
+    genres: manga.genres.map((genre) => genre.name),
+    imageUrl,
+    url: manga.url,
   };
 }
 
-function adaptAniListToJikan(manga: AniListManga): JikanManga {
-    const imageUrl = manga.coverImage.extraLarge || manga.coverImage.large || "";
-    return {
-        mal_id: manga.id, // AniList ID pode ser usado aqui
-        url: manga.siteUrl,
-        images: {
-            jpg: { image_url: imageUrl, small_image_url: imageUrl, large_image_url: imageUrl },
-            webp: { image_url: imageUrl, small_image_url: imageUrl, large_image_url: imageUrl },
-        },
-        title: manga.title.romaji || manga.title.english || manga.title.native || "",
-        type: normalizeMangaType(manga.format),
-        chapters: manga.chapters,
-        status: manga.status,
-        score: manga.averageScore ? manga.averageScore / 10 : null, // AniList score é de 0-100
-        synopsis: manga.description ?? null,
-        genres: manga.genres.map(genre => ({ mal_id: 0, type: 'manga', name: genre, url: '' })),
-    };
+function adaptKitsuToOnlineManga(manga: KitsuManga): OnlineManga {
+  const imageUrl = manga.attributes.posterImage?.original || manga.attributes.posterImage?.large || manga.attributes.posterImage?.small || "";
+  const sourceId = manga.id;
+
+  return {
+    id: createMangaLibraryId("kitsu", manga.attributes.canonicalTitle, sourceId),
+    sourceProvider: "kitsu",
+    sourceId,
+    title: manga.attributes.canonicalTitle,
+    type: normalizeMangaType(manga.attributes.mangaType),
+    totalChapters: manga.attributes.chapterCount ?? 0,
+    status: manga.attributes.status,
+    score: manga.attributes.averageRating ? parseFloat(manga.attributes.averageRating) / 10 : null,
+    synopsis: manga.attributes.synopsis ?? null,
+    genres: [],
+    imageUrl,
+    url: `https://kitsu.io/manga/${manga.attributes.slug}`,
+  };
 }
 
-async function searchJikan(term: string, signal: AbortSignal): Promise<JikanManga[]> {
+function adaptAniListToOnlineManga(manga: AniListManga): OnlineManga {
+  const imageUrl = manga.coverImage.extraLarge || manga.coverImage.large || "";
+  const sourceId = String(manga.id);
+
+  return {
+    id: createMangaLibraryId("anilist", manga.title.romaji || manga.title.english || manga.title.native || "", sourceId),
+    sourceProvider: "anilist",
+    sourceId,
+    title: manga.title.romaji || manga.title.english || manga.title.native || "",
+    type: normalizeMangaType(manga.format),
+    totalChapters: manga.chapters ?? 0,
+    status: manga.status,
+    score: manga.averageScore ? manga.averageScore / 10 : null,
+    synopsis: manga.description ?? null,
+    genres: manga.genres,
+    imageUrl,
+    url: manga.siteUrl,
+  };
+}
+
+async function searchJikan(term: string, signal: AbortSignal): Promise<OnlineManga[]> {
   const response = await fetch(`https://api.jikan.moe/v4/manga?q=${encodeURIComponent(term)}&sfw`, { signal });
   if (!response.ok) {
     throw new Error(`Status: ${response.status}`);
@@ -87,10 +100,10 @@ async function searchJikan(term: string, signal: AbortSignal): Promise<JikanMang
 
   const data = await response.json();
   const jikanResults = (data.data || []) as JikanManga[];
-  return jikanResults.map((m) => ({ ...m, type: normalizeMangaType(m.type) }));
+  return jikanResults.map(adaptJikanToOnlineManga);
 }
 
-async function searchKitsu(term: string, signal: AbortSignal): Promise<JikanManga[]> {
+async function searchKitsu(term: string, signal: AbortSignal): Promise<OnlineManga[]> {
   const kitsuResponse = await fetch(`https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(term)}`, {
     signal,
   });
@@ -100,13 +113,13 @@ async function searchKitsu(term: string, signal: AbortSignal): Promise<JikanMang
 
   const kitsuData = await kitsuResponse.json();
   if (kitsuData.data && kitsuData.data.length > 0) {
-    return kitsuData.data.map(adaptKitsuToJikan);
+    return kitsuData.data.map(adaptKitsuToOnlineManga);
   }
 
   return [];
 }
 
-async function searchAniList(term: string, signal: AbortSignal): Promise<JikanManga[]> {
+async function searchAniList(term: string, signal: AbortSignal): Promise<OnlineManga[]> {
   const query = `
     query ($search: String, $type: MediaType) {
       Page(page: 1, perPage: 20) {
@@ -157,27 +170,26 @@ async function searchAniList(term: string, signal: AbortSignal): Promise<JikanMa
 
   const data = await response.json();
   const anilistResults = (data.data?.Page?.media || []) as AniListManga[];
-  return anilistResults.map(adaptAniListToJikan);
+  return anilistResults.map(adaptAniListToOnlineManga);
 }
 
 export default function SearchPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<JikanManga[]>([]);
+  const [searchResults, setSearchResults] = useState<OnlineManga[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const [apiSource, setApiSource] = useState<ApiSource>("Auto");
 
-
   useEffect(() => {
     const handler = setTimeout(() => {
-        if (searchTerm.trim().length >= 3) {
-            setDebouncedSearchTerm(searchTerm);
-        } else {
-            setDebouncedSearchTerm("");
-        }
-    }, 500); // 500ms debounce
+      if (searchTerm.trim().length >= 3) {
+        setDebouncedSearchTerm(searchTerm);
+      } else {
+        setDebouncedSearchTerm("");
+      }
+    }, 500);
 
     return () => {
       clearTimeout(handler);
@@ -203,16 +215,16 @@ export default function SearchPage() {
         if (cachedData) {
           console.log("Servindo resultados do cache para:", normalizedTerm);
           startTransition(() => {
-             setSearchResults(JSON.parse(cachedData));
+            setSearchResults(JSON.parse(cachedData));
           });
           return;
         }
       } catch (error) {
         console.warn("Não foi possível ler o cache da sessão:", error);
       }
-      
+
       setIsSearching(true);
-      let results: JikanManga[] = [];
+      let results: OnlineManga[] = [];
       const failedApis: string[] = [];
 
       const runJikanSearch = async () => {
@@ -247,57 +259,55 @@ export default function SearchPage() {
           return [];
         }
       };
-      
+
       if (apiSource === "Jikan") {
         results = await runJikanSearch();
       } else if (apiSource === "Kitsu") {
         results = await runKitsuSearch();
       } else if (apiSource === "AniList") {
         results = await runAniListSearch();
-      } else { // Auto - Busca em paralelo e agrega os resultados
+      } else {
         const allSearches = await Promise.allSettled([
-            runJikanSearch(),
-            runKitsuSearch(),
-            runAniListSearch(),
+          runJikanSearch(),
+          runKitsuSearch(),
+          runAniListSearch(),
         ]);
 
-        let combinedResults: JikanManga[] = [];
-        allSearches.forEach(result => {
-            if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-                combinedResults.push(...result.value);
-            }
+        let combinedResults: OnlineManga[] = [];
+        allSearches.forEach((result) => {
+          if (result.status === "fulfilled" && Array.isArray(result.value)) {
+            combinedResults.push(...result.value);
+          }
         });
 
-        // Remove duplicados baseando-se na combinação de título e tipo
         const uniqueKeys = new Set<string>();
-        results = combinedResults.filter(manga => {
-            const key = `${manga.title.toLowerCase()}|${manga.type}`;
-            if (!uniqueKeys.has(key)) {
-                uniqueKeys.add(key);
-                return true;
-            }
-            return false;
+        results = combinedResults.filter((manga) => {
+          const key = `${manga.sourceProvider}|${manga.sourceId || manga.title.toLowerCase()}|${manga.type}`;
+          if (!uniqueKeys.has(key)) {
+            uniqueKeys.add(key);
+            return true;
+          }
+          return false;
         });
 
-        // Ordena os resultados por score (se disponível), do maior para o menor
         results.sort((a, b) => (b.score || 0) - (a.score || 0));
       }
 
       if (signal.aborted) {
         return;
       }
-      
+
       if (results.length === 0) {
         let description = "Nenhum título foi encontrado com esse termo. Tente outra palavra-chave.";
         if (failedApis.length > 0) {
-            description = `Provável que ${failedApis.join(", ")} esteja com problemas. Tente outra API ou palavra-chave.`
+          description = `Provável que ${failedApis.join(", ")} esteja com problemas. Tente outra API ou palavra-chave.`;
         }
         toast({
-         variant: "destructive",
-         title: "Nenhum Resultado",
-         description: description,
-       });
-     }
+          variant: "destructive",
+          title: "Nenhum Resultado",
+          description,
+        });
+      }
 
       startTransition(() => {
         if (signal.aborted) {
@@ -332,9 +342,7 @@ export default function SearchPage() {
 
   return (
     <div className="container mx-auto">
-      <h1 className="text-3xl font-headline font-bold mb-6">
-        Buscar Títulos Online
-      </h1>
+      <h1 className="text-3xl font-headline font-bold mb-6">Buscar Títulos Online</h1>
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <div className="relative flex-grow">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -361,7 +369,6 @@ export default function SearchPage() {
         </div>
       </div>
 
-
       <div>
         <h2 className="text-2xl font-headline font-semibold mb-4">
           {debouncedSearchTerm.trim().length >= 3
@@ -369,7 +376,7 @@ export default function SearchPage() {
             : "Digite ao menos 3 caracteres para buscar"}
         </h2>
         {isLoading ? (
-           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
             {Array.from({ length: 12 }).map((_, i) => (
               <div key={i} className="flex flex-col gap-2">
                 <Skeleton className="h-[300px] w-full" />
@@ -380,9 +387,8 @@ export default function SearchPage() {
           </div>
         ) : searchResults.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-            {searchResults.map((manga, index) => (
-              // Usamos uma combinação do ID (se existir) e o índice como chave para evitar colisões
-              <OnlineMangaCard key={`${manga.mal_id || manga.title}-${index}`} manga={manga} />
+            {searchResults.map((manga) => (
+              <OnlineMangaCard key={manga.id} manga={manga} />
             ))}
           </div>
         ) : (
@@ -391,7 +397,4 @@ export default function SearchPage() {
       </div>
     </div>
   );
-
 }
-
-    
