@@ -7,7 +7,6 @@ import { useUser } from '@/firebase';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar, BottomBar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
-import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { Book } from 'lucide-react';
 
 export default function MainLayout({
@@ -52,7 +51,6 @@ export default function MainLayout({
             </div>
             <BottomBar />
         </div>
-        <FirebaseErrorListener />
       </SidebarProvider>
   );
 }
