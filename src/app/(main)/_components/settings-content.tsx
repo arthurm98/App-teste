@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useLibrary } from "@/hooks/use-library";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase";
+import { BackupSchema } from "@/lib/schemas";
 
 const LAST_CHECK_KEY = 'mangatrack-last-check';
 const COOLDOWN_KEY = 'mangatrack-cooldown-end';
@@ -127,16 +128,18 @@ export function SettingsContent({ showSyncOptions = false }: SettingsContentProp
                 if (typeof text !== 'string') {
                     throw new Error("Ocorreu um erro ao ler o arquivo.");
                 }
-                const restoredLibrary = JSON.parse(text);
-                // Validação simples do backup
-                if (Array.isArray(restoredLibrary) && restoredLibrary.every(item => 'id' in item && 'title' in item)) {
-                    restoreLibrary(restoredLibrary);
+                const json = JSON.parse(text);
+                const result = BackupSchema.safeParse(json);
+
+                if (result.success) {
+                    restoreLibrary(result.data as any);
                     toast({
                         title: "Restauração Concluída",
                         description: "Sua biblioteca foi restaurada com sucesso.",
                     });
                 } else {
-                    throw new Error("Arquivo de backup inválido.");
+                    console.error("Erro de validação do backup:", result.error);
+                    throw new Error("Arquivo de backup inválido ou corrompido.");
                 }
             } catch (error: any) {
                 console.error("Erro ao restaurar:", error);
