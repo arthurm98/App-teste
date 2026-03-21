@@ -1,8 +1,8 @@
 # MangaTrack: Seu Organizador de Mangás, Manhwas e Webtoons
 
-MangaTrack é uma aplicação web moderna, rápida e responsiva, projetada para ajudar você a organizar e acompanhar o progresso de leitura de todos os seus mangás, manhwas, webtoons e novels em um único lugar. Com uma interface limpa e foco na experiência do usuário, nunca mais perca o fio da meada em suas leituras.
+MangaTrack é uma aplicação web moderna, rápida e responsiva, projetada para ajudar você a organizar e acompanhar o progresso de leitura de mangás, manhwas, webtoons e novels em um único lugar. O projeto usa **um único manifesto NPM na raiz** (`package.json`) para instalação, desenvolvimento, build e fluxos auxiliares como Genkit.
 
-A aplicação é um **Progressive Web App (PWA)**, o que significa que pode ser instalada em seu celular ou desktop para uma experiência mais próxima a um aplicativo nativo.
+A aplicação é um **Progressive Web App (PWA)**, o que significa que pode ser instalada no celular ou desktop para uma experiência mais próxima a um aplicativo nativo.
 
 ## ✨ Recursos Principais
 
@@ -11,53 +11,43 @@ A aplicação é um **Progressive Web App (PWA)**, o que significa que pode ser 
 - **Acompanhamento de Progresso:** Marque facilmente os capítulos lidos e visualize seu progresso com barras de porcentagem.
 - **Estatísticas Visuais:** Tenha insights sobre seus hábitos de leitura com gráficos que mostram a distribuição de gêneros e o status dos seus títulos.
 - **Sincronização na Nuvem:** Crie uma conta com e-mail e senha para ter sua biblioteca sincronizada e acessível em qualquer dispositivo através do Firebase.
-- **Modo Offline:** Prefere não criar uma conta? Use o modo anônimo e seus dados serão salvos localmente no seu navegador.
+- **Modo Offline:** Prefere não criar uma conta? Use o modo anônimo e seus dados serão salvos localmente no navegador.
 - **Backup e Restauração:** No modo offline, você pode exportar sua biblioteca para um arquivo JSON e restaurá-la a qualquer momento.
-- **Design Responsivo e Moderno:** Interface otimizada para uma experiência de uso agradável tanto em desktops quanto em dispositivos móveis (Android/iOS).
+- **Design Responsivo e Moderno:** Interface otimizada para uma experiência agradável em desktops e dispositivos móveis.
 - **Tema Claro e Escuro:** Alterne entre os temas para uma leitura mais confortável a qualquer hora do dia.
-- **Instalável (PWA):** Adicione o MangaTrack à tela inicial do seu dispositivo para acesso rápido e uma experiência de tela cheia.
+- **Instalável (PWA):** Adicione o MangaTrack à tela inicial do dispositivo para acesso rápido e experiência de tela cheia.
 
 ## 🚀 Tecnologias Utilizadas
 
-O MangaTrack foi construído com um conjunto de tecnologias moderno e escalável, focado em performance e qualidade de desenvolvimento.
-
-- **Framework:** [Next.js](https://nextjs.org/) (com App Router)
+- **Framework:** [Next.js](https://nextjs.org/) (App Router)
 - **Linguagem:** [TypeScript](https://www.typescriptlang.org/)
 - **Estilização:** [Tailwind CSS](https://tailwindcss.com/)
 - **Componentes UI:** [ShadCN UI](https://ui.shadcn.com/)
-- **Backend e Banco de Dados:** [Firebase](https://firebase.google.com/) (Authentication para usuários e Firestore como banco de dados NoSQL)
+- **Backend e Banco de Dados:** [Firebase](https://firebase.google.com/)
 - **Gráficos:** [Recharts](https://recharts.org/)
-- **Progressive Web App (PWA):** [next-pwa](https://www.npmjs.com/package/next-pwa)
-- **Validação de Formulários:** [React Hook Form](https://react-hook-form.com/) & [Zod](https://zod.dev/)
+- **PWA:** [next-pwa](https://www.npmjs.com/package/next-pwa)
+- **Validação de Formulários:** [React Hook Form](https://react-hook-form.com/) e [Zod](https://zod.dev/)
+- **IA / Flows locais:** [Genkit](https://genkit.dev/)
 
-## ⚙️ Como Executar o Projeto Localmente
-
-Para executar o MangaTrack em seu ambiente de desenvolvimento, siga os passos abaixo.
+## ⚙️ Fluxo Único do Projeto
 
 ### Pré-requisitos
 
-- [Node.js](https://nodejs.org/) (versão 18 ou superior)
-- [npm](https://www.npmjs.com/) ou [yarn](https://yarnpkg.com/)
+- [Node.js](https://nodejs.org/) 18 ou superior
+- [npm](https://www.npmjs.com/)
 
-### 1. Clone o Repositório
+### 1. Clone o repositório
 
 ```bash
 git clone https://github.com/SEU_USUARIO/mangatrack.git
 cd mangatrack
 ```
 
-### 2. Configure as Variáveis de Ambiente
+### 2. Configure as variáveis de ambiente
 
-Para que a aplicação se conecte ao Firebase, você precisa de um projeto Firebase.
+Crie um arquivo `.env` na **raiz do projeto** com as credenciais do Firebase usadas pela aplicação.
 
-1.  Acesse o [console do Firebase](https://console.firebase.google.com/) e crie um novo projeto.
-2.  Adicione um aplicativo da Web ao seu projeto.
-3.  Nas configurações do projeto, encontre suas credenciais de configuração do Firebase.
-4.  Crie um arquivo chamado `.env` na raiz do projeto e adicione suas credenciais, seguindo o formato do arquivo `.env.example` (que deve ser criado por você com o conteúdo abaixo).
-
-**Conteúdo do arquivo `.env`:**
-```
-# Substitua pelos dados do seu projeto Firebase
+```dotenv
 NEXT_PUBLIC_FIREBASE_API_KEY="AIza..."
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="seu-projeto.firebaseapp.com"
 NEXT_PUBLIC_FIREBASE_PROJECT_ID="seu-projeto"
@@ -66,25 +56,45 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="12345..."
 NEXT_PUBLIC_FIREBASE_APP_ID="1:12345...:web:abcdef..."
 ```
 
-> **Atenção:** O arquivo `src/firebase/config.ts` utiliza essas variáveis para configurar o Firebase. Certifique-se de que os nomes das variáveis no `.env` correspondem aos usados no código.
+> O arquivo `src/firebase/config.ts` consome essas variáveis. Se você habilitar os fluxos de IA do Genkit, também precisará configurar as variáveis exigidas pelo provedor usado nesses fluxos.
 
-### 3. Instale as Dependências
+### 3. Instale as dependências
 
-Na raiz do projeto, execute o comando para instalar todos os pacotes necessários:
+Use somente o manifesto da raiz:
 
 ```bash
 npm install
 ```
 
-### 4. Rode o Servidor de Desenvolvimento
+> Não execute `npm install` dentro de `src/`. O diretório `src/` não é um workspace separado.
 
-Com tudo configurado, inicie a aplicação:
+### 4. Rode a aplicação
 
 ```bash
 npm run dev
 ```
 
-A aplicação estará disponível em [http://localhost:9002](http://localhost:9002).
+A aplicação ficará disponível em [http://localhost:9002](http://localhost:9002).
+
+## 🤖 Fluxos locais com Genkit
+
+As dependências e scripts do Genkit também ficam centralizados na raiz do projeto.
+
+```bash
+npm run genkit:dev
+npm run genkit:watch
+```
+
+Esses comandos usam `src/ai/dev.ts` como ponto de entrada.
+
+## 🧪 Comandos úteis
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+npm run ci:build
+```
 
 ## 📄 Licença
 
