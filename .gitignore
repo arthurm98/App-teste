@@ -39,3 +39,6 @@ next-env.d.ts
 
 # studio
 .studio/
+
+# nested installs
+/src/node_modules
