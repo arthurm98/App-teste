@@ -13,6 +13,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { FirebaseError } from 'firebase/app';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signInAnonymously } from 'firebase/auth';
 import { Book, User as UserIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -62,31 +63,35 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const handleAuthError = (error: any) => {
+  const handleAuthError = (error: unknown) => {
     let title = 'Erro na Autenticação';
     let description = 'Ocorreu um erro. Por favor, tente novamente.';
 
-    switch (error.code) {
-      case 'auth/user-not-found':
-      case 'auth/wrong-password':
-      case 'auth/invalid-credential':
-        title = 'Credenciais Inválidas';
-        description = 'O e-mail ou a senha estão incorretos. Verifique e tente novamente.';
-        break;
-      case 'auth/email-already-in-use':
-        title = 'E-mail já cadastrado';
-        description = 'Este e-mail já está em uso. Tente fazer login ou use um e-mail diferente.';
-        break;
-      case 'auth/invalid-email':
-        title = 'E-mail Inválido';
-        description = 'O formato do e-mail fornecido não é válido.';
-        break;
-      case 'auth/weak-password':
-        title = 'Senha Fraca';
-        description = 'Sua senha é muito fraca. Tente uma combinação mais forte.';
-        break;
-      default:
-        console.error('Authentication Error:', error);
+    if (error instanceof FirebaseError) {
+      switch (error.code) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+          title = 'Credenciais Inválidas';
+          description = 'O e-mail ou a senha estão incorretos. Verifique e tente novamente.';
+          break;
+        case 'auth/email-already-in-use':
+          title = 'E-mail já cadastrado';
+          description = 'Este e-mail já está em uso. Tente fazer login ou use um e-mail diferente.';
+          break;
+        case 'auth/invalid-email':
+          title = 'E-mail Inválido';
+          description = 'O formato do e-mail fornecido não é válido.';
+          break;
+        case 'auth/weak-password':
+          title = 'Senha Fraca';
+          description = 'Sua senha é muito fraca. Tente uma combinação mais forte.';
+          break;
+        default:
+          console.error('Authentication Error:', error);
+      }
+    } else {
+      console.error('Authentication Error:', error);
     }
 
     toast({
