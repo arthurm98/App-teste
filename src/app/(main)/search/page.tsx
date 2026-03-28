@@ -230,12 +230,9 @@ export default function SearchPage() {
             searchAniList(),
         ]);
 
-        let combinedResults: JikanManga[] = [];
-        allSearches.forEach(result => {
-            if (result.status === 'fulfilled' && Array.isArray(result.value)) {
-                combinedResults.push(...result.value);
-            }
-        });
+        const combinedResults = allSearches.flatMap(result =>
+            result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : []
+        );
 
         // Remove duplicados baseando-se na combinação de título e tipo
         const uniqueKeys = new Set<string>();
