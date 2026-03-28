@@ -141,12 +141,12 @@ export function SettingsContent({ showSyncOptions = false }: SettingsContentProp
                     console.error("Erro de validação do backup:", result.error);
                     throw new Error("Arquivo de backup inválido ou corrompido.");
                 }
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error("Erro ao restaurar:", error);
                 toast({
                     variant: "destructive",
                     title: "Erro na Restauração",
-                    description: error.message || "Não foi possível restaurar a biblioteca a partir do arquivo.",
+                    description: error instanceof Error ? error.message : "Não foi possível restaurar a biblioteca a partir do arquivo.",
                 });
             }
         };
