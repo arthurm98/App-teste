@@ -7,6 +7,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
  */
 export interface AppEvents {
   'permission-error': FirestorePermissionError;
+  'ai-flow-error': { flowName: string; error: Error | unknown; context?: any };
 }
 
 // A generic type for a callback function.
