@@ -200,16 +200,20 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         const syncLocalToCloud = () => {
           const batch = writeBatch(firestore);
           let itemsToSync = 0;
-          const cloudMangaIds = new Set(cloudLibrary.map(m => m.id));
+          const cloudMangaIds = new Set();
+          for (const m of cloudLibrary) {
+            cloudMangaIds.add(m.id);
+          }
           
-          localLibrary.forEach(localManga => {
+          const now = Timestamp.now();
+          for (const localManga of localLibrary) {
             if (!cloudMangaIds.has(localManga.id)) {
               const docRef = doc(firestore, 'users', user.uid, 'library', localManga.id);
-              const mangaData = { ...localManga, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
+              const mangaData = { ...localManga, createdAt: now, updatedAt: now };
               batch.set(docRef, mangaData);
               itemsToSync++;
             }
-          });
+          }
           
           if (itemsToSync > 0) {
              batch.commit().then(() => {
