@@ -26,3 +26,12 @@ export const MangaSchema = z.object({
 export const BackupSchema = z.array(MangaSchema);
 
 export type MangaBackup = z.infer<typeof BackupSchema>;
+
+export const NotificationSchema = z.object({
+  id: z.string(),
+  mangaTitle: z.string(),
+  message: z.string(),
+  date: z.string().datetime(),
+});
+
+export const NotificationListSchema = z.array(NotificationSchema);
