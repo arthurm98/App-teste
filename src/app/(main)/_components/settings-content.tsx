@@ -7,6 +7,7 @@ import { useLibrary } from "@/hooks/use-library";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase";
 import { BackupSchema } from "@/lib/schemas";
+import { Timestamp } from "firebase/firestore";
 
 const LAST_CHECK_KEY = 'mangatrack-last-check';
 const COOLDOWN_KEY = 'mangatrack-cooldown-end';
@@ -132,7 +133,12 @@ export function SettingsContent({ showSyncOptions = false }: SettingsContentProp
                 const result = BackupSchema.safeParse(json);
 
                 if (result.success) {
-                    restoreLibrary(result.data as any);
+                    const restoredData = result.data.map(manga => ({
+                        ...manga,
+                        createdAt: new Timestamp(manga.createdAt.seconds, manga.createdAt.nanoseconds),
+                        updatedAt: new Timestamp(manga.updatedAt.seconds, manga.updatedAt.nanoseconds),
+                    }));
+                    restoreLibrary(restoredData);
                     toast({
                         title: "Restauração Concluída",
                         description: "Sua biblioteca foi restaurada com sucesso.",
