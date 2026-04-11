@@ -1,11 +1,12 @@
 
 'use client';
 import { getAuth, type User } from 'firebase/auth';
+import type { DocumentData } from 'firebase/firestore';
 
 type SecurityRuleContext = {
   path: string;
   operation: 'get' | 'list' | 'create' | 'update' | 'delete' | 'write';
-  requestResourceData?: any;
+  requestResourceData?: DocumentData;
 };
 
 interface FirebaseAuthToken {
@@ -16,7 +17,7 @@ interface FirebaseAuthToken {
   phone_number: string | null;
   sub: string;
   firebase: {
-    identities: Record<string, any>;
+    identities: Record<string, string[]>;
     sign_in_provider: string;
     tenant: string | null;
   };
@@ -32,7 +33,7 @@ interface SecurityRuleRequest {
   method: string;
   path: string;
   resource?: {
-    data: any;
+    data: DocumentData;
   };
 }
 
@@ -56,10 +57,10 @@ function buildAuthObject(currentUser: User | null): FirebaseAuthObject | null {
     firebase: {
       identities: currentUser.providerData.reduce((acc, p) => {
         if (p.providerId) {
-          acc[p.providerId] = p.uid;
+          acc[p.providerId] = [p.uid];
         }
         return acc;
-      }, {} as Record<string, any>),
+      }, {} as Record<string, string[]>),
       sign_in_provider: currentUser.providerId,
       tenant: currentUser.tenantId,
     },

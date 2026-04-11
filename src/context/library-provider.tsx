@@ -10,6 +10,7 @@ import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getLatestMangaInfo } from '@/services/update-manga';
 import type { Notification } from '@/app/(main)/_components/notifications-log';
+import { BackupSchema, NotificationListSchema } from '@/lib/schemas';
 
 interface LibraryContextType {
   library: Manga[];
@@ -40,7 +41,19 @@ const addNotification = (mangaTitle: string, message: string) => {
         date: new Date().toISOString(),
     };
     try {
-        const existing = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]') as Notification[];
+        const stored = localStorage.getItem(NOTIFICATIONS_KEY);
+        let existing: Notification[] = [];
+
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            const result = NotificationListSchema.safeParse(parsed);
+            if (result.success) {
+                existing = result.data;
+            } else {
+                console.error("Dados de notificação inválidos no localStorage", result.error);
+            }
+        }
+
         const updated = [newNotification, ...existing].slice(0, 50); // Limita a 50 notificações
         localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updated));
         // Dispara um evento para que outros componentes (como o log) possam reagir
@@ -67,7 +80,16 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     try {
       const savedLibrary = window.localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedLibrary) {
-        setLocalLibrary(JSON.parse(savedLibrary));
+        const parsed = JSON.parse(savedLibrary);
+        const result = BackupSchema.safeParse(parsed);
+        if (result.success) {
+          setLocalLibrary(result.data);
+        } else {
+          console.error("Dados da biblioteca local inválidos no localStorage", result.error);
+          // Em caso de erro, poderíamos tentar recuperar o que for válido ou começar do zero
+          // Por segurança, começamos do zero se os dados estiverem corrompidos
+          setLocalLibrary([]);
+        }
       }
     } catch (error) {
       console.error("Erro ao carregar a biblioteca do localStorage", error);
@@ -200,16 +222,20 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         const syncLocalToCloud = () => {
           const batch = writeBatch(firestore);
           let itemsToSync = 0;
-          const cloudMangaIds = new Set(cloudLibrary.map(m => m.id));
+          const cloudMangaIds = new Set();
+          for (const m of cloudLibrary) {
+            cloudMangaIds.add(m.id);
+          }
           
-          localLibrary.forEach(localManga => {
+          const now = Timestamp.now();
+          for (const localManga of localLibrary) {
             if (!cloudMangaIds.has(localManga.id)) {
               const docRef = doc(firestore, 'users', user.uid, 'library', localManga.id);
-              const mangaData = { ...localManga, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
+              const mangaData = { ...localManga, createdAt: now, updatedAt: now };
               batch.set(docRef, mangaData);
               itemsToSync++;
             }
-          });
+          }
           
           if (itemsToSync > 0) {
              batch.commit().then(() => {

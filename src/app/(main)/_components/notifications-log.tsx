@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Bell, Trash2, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { NotificationListSchema } from "@/lib/schemas";
 
 export interface Notification {
     id: string;
@@ -25,7 +26,19 @@ export function NotificationsLog() {
         setIsClient(true);
         const storedNotifications = localStorage.getItem(NOTIFICATIONS_KEY);
         if (storedNotifications) {
-            setNotifications(JSON.parse(storedNotifications));
+            try {
+                const parsed = JSON.parse(storedNotifications);
+                const result = NotificationListSchema.safeParse(parsed);
+                if (result.success) {
+                    setNotifications(result.data);
+                } else {
+                    console.error("Dados de notificação inválidos", result.error);
+                    setNotifications([]);
+                }
+            } catch (e) {
+                console.error("Erro ao processar notificações", e);
+                setNotifications([]);
+            }
         }
     }, []);
     
@@ -35,7 +48,21 @@ export function NotificationsLog() {
 
       const handleStorageChange = () => {
         const storedNotifications = localStorage.getItem(NOTIFICATIONS_KEY);
-        setNotifications(storedNotifications ? JSON.parse(storedNotifications) : []);
+        if (storedNotifications) {
+            try {
+                const parsed = JSON.parse(storedNotifications);
+                const result = NotificationListSchema.safeParse(parsed);
+                if (result.success) {
+                    setNotifications(result.data);
+                } else {
+                    setNotifications([]);
+                }
+            } catch (e) {
+                setNotifications([]);
+            }
+        } else {
+            setNotifications([]);
+        }
       };
 
       window.addEventListener('storage', handleStorageChange);
