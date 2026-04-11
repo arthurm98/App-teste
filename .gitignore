@@ -39,3 +39,6 @@ next-env.d.ts
 
 # studio
 .studio/
+public/sw.js
+public/workbox-*.js
+public/swe-worker*.js
