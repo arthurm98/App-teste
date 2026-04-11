@@ -1,8 +1,8 @@
-import { defineFlow } from '@genkit-ai/flow';
 import * as z from 'zod';
 import { errorEmitter } from '../../firebase/error-emitter';
+import { ai } from '../genkit';
 
-export const getLatestChapterFlow = defineFlow(
+export const getLatestChapterFlow = ai.defineFlow(
   {
     name: 'getLatestChapter',
     inputSchema: z.object({

@@ -10,7 +10,7 @@ import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from '@
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getLatestMangaInfo } from '@/services/update-manga';
 import type { Notification } from '@/app/(main)/_components/notifications-log';
-import { BackupSchema, NotificationListSchema } from '@/lib/schemas';
+import { BackupSchema, MangaSchema, NotificationListSchema } from '@/lib/schemas';
 
 interface LibraryContextType {
   library: Manga[];
@@ -86,9 +86,18 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
           setLocalLibrary(result.data);
         } else {
           console.error("Dados da biblioteca local inválidos no localStorage", result.error);
-          // Em caso de erro, poderíamos tentar recuperar o que for válido ou começar do zero
-          // Por segurança, começamos do zero se os dados estiverem corrompidos
-          setLocalLibrary([]);
+          if (Array.isArray(parsed)) {
+            const validItems = parsed.flatMap((item) => {
+              const itemResult = MangaSchema.safeParse(item);
+              return itemResult.success ? [itemResult.data] : [];
+            });
+            if (validItems.length > 0) {
+              console.warn(`Recuperados ${validItems.length} item(ns) válido(s) da biblioteca local com corrupção parcial.`);
+            }
+            setLocalLibrary(validItems);
+          } else {
+            setLocalLibrary([]);
+          }
         }
       }
     } catch (error) {
