@@ -132,7 +132,7 @@ export function SettingsContent({ showSyncOptions = false }: SettingsContentProp
                 const result = BackupSchema.safeParse(json);
 
                 if (result.success) {
-                    restoreLibrary(result.data as any);
+                    restoreLibrary(result.data);
                     toast({
                         title: "Restauração Concluída",
                         description: "Sua biblioteca foi restaurada com sucesso.",
