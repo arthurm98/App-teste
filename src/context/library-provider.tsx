@@ -279,13 +279,21 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   }, [user, firestore, isLocalLoaded, localLibrary, cloudLibrary, toast]);
 
   const library = useMemo(() => (!user || user.isAnonymous ? localLibrary : cloudLibrary), [user, cloudLibrary, localLibrary]);
+  const libraryIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const manga of library) {
+      ids.add(manga.id);
+    }
+    return ids;
+  }, [library]);
+
   const isLoading = useMemo(() => isUserLoading || (!user ? !isLocalLoaded : isCloudLoading), [user, isUserLoading, isCloudLoading, isLocalLoaded]);
 
 
   const isMangaInLibrary = useCallback((mangaId: number, title?: string) => {
     const checkId = mangaId > 0 ? String(mangaId) : generateFallbackId(title || '');
-    return library.some(m => m.id === checkId);
-  }, [library]);
+    return libraryIds.has(checkId);
+  }, [libraryIds]);
 
   const addToLibrary = useCallback((manga: JikanManga) => {
     if (isMangaInLibrary(manga.mal_id, manga.title)) {
